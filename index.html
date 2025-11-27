@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>For My Girl ❤️</title>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; outline: none; box-sizing: border-box; }
+    :root{--bg:#0f172a;--card:#0b1220;--accent:#ff6b81; --purple:#a855f7}
+    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; overflow:hidden;}
+    body{background:linear-gradient(180deg,#071022 0%, #0b1220 60%);color:#e6eef8;display:flex;align-items:center;justify-content:center; touch-action: manipulation; user-select: none;} 
+    
+    .stage{position:relative;width:100%;height:100vh;overflow:hidden; cursor: pointer;}
+
+    /* THE CHARACTER */
+    .chaser{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:42px;z-index:20;transition: width .2s, height .2s, transform 0.1s;}
+    .chaser.face{background:linear-gradient(180deg,#fff 0%,#ffdede 100%);box-shadow:0 6px 18px rgba(0,0,0,.35);}
+
+    /* ANIMATIONS */
+    @keyframes shake-angry {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      25% { transform: translate(-50%, -50%) rotate(-8deg); }
+      75% { transform: translate(-50%, -50%) rotate(8deg); }
+      100% { transform: translate(-50%, -50%) rotate(0deg); }
+    }
+    .chaser.angry-anim { animation: shake-angry 0.15s infinite; }
+
+    @keyframes spin-happy {
+        0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+        50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.3); }
+        100% { transform: translate(-50%, -50%) rotate(360deg) scale(1); }
+    }
+    .chaser.spin { animation: spin-happy 0.6s ease-in-out; }
+
+    /* Target Marker */
+    .target-marker {
+        position: absolute; width: 20px; height: 20px;
+        border: 2px solid rgba(255, 107, 129, 0.6);
+        border-radius: 50%; transform: translate(-50%, -50%);
+        pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5;
+    }
+    .target-marker.active { opacity: 1; animation: pulse-ring 1s infinite; }
+    @keyframes pulse-ring {
+        0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+    }
+
+    .particles{position:absolute;left:0;top:0;pointer-events:none;width:100%;height:100%;overflow:visible; z-index: 10;}
+    
+    /* UI ELEMENTS */
+    .controls{position:fixed;right:12px;top:12px;display:flex;flex-direction:column;gap:8px;z-index: 100;}
+    .controls button{background:rgba(255,255,255,.1);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.15);color:white;padding:10px 14px;border-radius:20px;cursor:pointer; font-size:13px; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.5);}
+    .controls button.active{background:rgba(255,107,129,0.9); border-color:rgba(255,107,129,1);}
+    
+    #toggleThreeAM.active { background: #6b21a8; border-color: #a855f7; box-shadow: 0 0 10px #a855f7; }
+
+    /* Hints Button (Top Left) */
+    .hint-btn { position: fixed; left: 12px; top: 12px; z-index: 110; background:rgba(255,255,255,.1); backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,.15); color:white; padding: 8px 12px; border-radius: 50%; font-size: 18px; cursor: pointer;}
+
+    /* MESSAGE BUTTON (Top Right, next to controls) */
+    .message-btn { 
+        position: fixed; right: 12px; top: 12px; z-index: 120; 
+        background:rgba(255,255,255,.1); backdrop-filter:blur(4px); 
+        border:1px solid rgba(255,255,255,.15); color:white; 
+        padding: 8px 12px; border-radius: 50%; font-size: 18px; cursor: pointer;
+        display: none; /* Hidden by default */
+    }
+    
+    /* State 1: Visible (Message Exists) */
+    .message-btn.visible { display: block; }
+    
+    /* State 2: New (Bouncing + Red Color) */
+    .message-btn.has-new { animation: bounce 1s infinite; background: #ff6b81; border: 1px solid white; }
+    
+    @keyframes bounce { 0%, 100% {transform: translateY(0);} 50% {transform: translateY(-5px);} }
+
+    /* MODAL BOXES (Shared Style) */
+    .modal-box {
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+        width: 300px; max-width: 90%;
+        background: rgba(11, 18, 32, 0.95); border: 1px solid rgba(255,255,255,0.1);
+        backdrop-filter: blur(12px); border-radius: 16px; padding: 20px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        z-index: 200; opacity: 0; pointer-events: none; transition: all 0.3s ease;
+    }
+    .modal-box.visible { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+    .modal-box h2 { margin: 0 0 15px 0; font-size: 18px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+    
+    .hint-list { list-style: none; padding: 0; margin: 0; font-size: 13px; color: #ccc; }
+    .hint-list li { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .hint-list li:last-child { border-bottom: none; }
+    .hint-list strong { color: white; display: block; margin-bottom: 4px; }
+    .hint-list em { color: #a855f7; display: block; margin-top: 4px; font-size: 12px; }
+
+    /* Message Content Style */
+    .letter-content { font-family: 'Georgia', serif; font-size: 15px; line-height: 1.5; color: #e6eef8; white-space: pre-wrap; font-style: italic; }
+
+    .close-btn { background: var(--accent); border: none; width: 100%; padding: 10px; margin-top: 15px; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; }
+
+    .card{position:fixed;left:50%;top:15%;transform:translateX(-50%);background:linear-gradient(180deg,#071a2b,#042536);padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.05);box-shadow:0 10px 30px rgba(3,10,18,.6); pointer-events: none; transition: opacity 0.5s; text-align: center; width: 240px; z-index: 50;}
+    .card h1{margin:0;font-size:16px}
+    .card p{margin:6px 0 0 0;font-size:13px;color:rgba(230,238,248,.86)}
+
+    /* Floating Tip Toast */
+    .tip-toast {
+        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+        background: rgba(255,255,255,0.95); color: #0b1220;
+        padding: 10px 20px; border-radius: 50px; font-size: 14px; font-weight: 600;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.3); opacity: 0; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        z-index: 300; pointer-events: none; text-align: center; width: max-content; max-width: 90%;
+    }
+    .tip-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="particles" id="particles"></div>
+    <div id="targetMarker" class="target-marker"></div>
+
+    <button class="hint-btn" id="openHint">🎁</button>
+    
+    <button class="message-btn" id="openMessage">💌</button>
+
+    <div class="modal-box" id="hintBox">
+        <h2>🎁 Easter Eggs Hints</h2>
+        <ul class="hint-list">
+            <li>
+                <strong>The Proposal 💍</strong>
+                Tap "3 A.M. Mode" 5 times quickly.
+            </li>
+            <li>
+                <strong>The Spicy Catch 😈</strong>
+                Catch (tap) me while in "3 A.M. Mode".
+            </li>
+            <li>
+                <strong>The Risk Taker 🤬</strong>
+                Tap me while I'm Angry.
+            </li>
+        </ul>
+        <button class="close-btn" id="closeHint">Got it!</button>
+    </div>
+
+    <div class="modal-box" id="messageBox">
+        <h2>💌 New Message</h2>
+        <div class="letter-content" id="letterText">
+            </div>
+        <button class="close-btn" id="closeMessage">Close</button>
+    </div>
+
+    <div id="chaser" class="chaser face">👨🏻‍💻</div>
+
+    <div class="card" id="card">
+      <h1>Hey beautiful!</h1>
+      <p>Tap anywhere to call me.</p>
+    </div>
+
+    <div id="tipToast" class="tip-toast">Remember to drink water! 💧</div>
+
+    <div class="controls" id="controls">
+      <div style="height: 30px;"></div> 
+      <button id="toggleBoody">Mode: Chill</button>
+      <button id="toggleThreeAM">3 A.M. Mode 😈</button>
+      <button id="toggleHearts">Hearts: OFF</button>
+      <button id="randomize">Randomize</button>
+    </div>
+  </div>
+
+<script>
+(function(){
+  // --- ❤️ YOUR MESSAGE GOES HERE ❤️ ---
+  // If you leave this empty "", the envelope icon disappears.
+  const myMessage = "I SUPPORT YOU IN EVERYTHING YOU DO. YOU ARE AMAZING AND CAPABLE OF GREAT THINGS. REMEMBER TO TAKE BREAKS AND TAKE CARE OF YOURSELF. "; 
+  // ----------------------------------------
+
+  const chaser = document.getElementById('chaser');
+  const particles = document.getElementById('particles');
+  const card = document.getElementById('card');
+  const boodyBtn = document.getElementById('toggleBoody');
+  const threeAMBtn = document.getElementById('toggleThreeAM');
+  const heartsBtn = document.getElementById('toggleHearts');
+  const marker = document.getElementById('targetMarker');
+  const tipToast = document.getElementById('tipToast');
+  
+  // Modal Elements
+  const hintBox = document.getElementById('hintBox');
+  const messageBox = document.getElementById('messageBox');
+  const openHintBtn = document.getElementById('openHint');
+  const closeHintBtn = document.getElementById('closeHint');
+  const openMsgBtn = document.getElementById('openMessage');
+  const closeMsgBtn = document.getElementById('closeMessage');
+  const letterText = document.getElementById('letterText');
+
+  // Game State
+  let target = {x: window.innerWidth/2, y: window.innerHeight/2}; 
+  let pos = {x: window.innerWidth/2, y: window.innerHeight/2}; 
+  let baseFace = '👨🏻‍💻'; 
+  let currentMode = 'chill'; 
+  let hasInteracted = false;
+  let heartsOn = false;
+  let eggClicks = 0;
+  let eggTimer = null;
+
+  pickNewWanderTarget();
+
+  // --- MESSAGE SYSTEM ---
+  if(myMessage && myMessage.length > 0) {
+      openMsgBtn.classList.add('visible'); // Makes it display: block
+      openMsgBtn.classList.add('has-new'); // Adds bounce/red
+      letterText.textContent = myMessage;
+  }
+
+  openMsgBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      messageBox.classList.add('visible');
+      // Remove animation, but NOT visibility
+      openMsgBtn.classList.remove('has-new'); 
+  });
+  closeMsgBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      messageBox.classList.remove('visible');
+  });
+
+  // --- HINT BOX LOGIC ---
+  openHintBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hintBox.classList.add('visible');
+  });
+  closeHintBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      hintBox.classList.remove('visible');
+  });
+
+  // Close modals on background click
+  window.addEventListener('click', (e) => {
+      if(hasModalOpen()) return;
+
+      if(!hasInteracted){ hasInteracted = true; card.style.opacity = '0'; }
+
+      if(e.target.id === 'chaser') {
+          handleChaserClick();
+          return; 
+      }
+      if(e.target.tagName !== 'BUTTON') {
+          moveMarker(e.clientX, e.clientY);
+          if(currentMode !== 'chill') {
+              target.x = e.clientX;
+              target.y = e.clientY;
+          }
+      }
+  });
+
+  function hasModalOpen() {
+      if(hintBox.classList.contains('visible') || messageBox.classList.contains('visible')) return true;
+      return false;
+  }
+
+  // --- TIPS SYSTEM ---
+  const tips = [
+      "You look so pretty today! ✨",
+      "Drink some water! 💧",
+      "Don't stress, you got this! 💪",
+      "I love you! ❤️",
+      "You are the CSS to my HTML 🎨",
+      "Sending virtual hugs 🤗"
+  ];
+
+  setInterval(() => {
+      if(currentMode === '3am' || hasModalOpen()) return; 
+      const randomTip = tips[Math.floor(Math.random() * tips.length)];
+      tipToast.textContent = randomTip;
+      tipToast.classList.add('show');
+      setTimeout(() => tipToast.classList.remove('show'), 4000);
+  }, 12000);
+
+
+  function moveMarker(x, y) {
+      marker.style.left = x + 'px';
+      marker.style.top = y + 'px';
+      marker.classList.remove('active');
+      void marker.offsetWidth; 
+      marker.classList.add('active');
+  }
+
+  // --- LOGIC: CLICKING THE CHARACTER ---
+  function handleChaserClick(){
+    if(currentMode === '3am') {
+        const spicyReactions = ['👅', '😏', '😈', '🤤'];
+        const reaction = spicyReactions[Math.floor(Math.random() * spicyReactions.length)];
+        chaser.textContent = reaction;
+        explodeParticles('🔥'); 
+        explodeParticles('💋'); 
+        setTimeout(() => { if(currentMode === '3am') chaser.textContent = '😈'; }, 1200);
+
+    } else if(currentMode === 'angry') {
+        chaser.textContent = '🤬'; 
+        explodeParticles('💢'); 
+        setTimeout(() => { if(currentMode === 'angry') chaser.textContent = '😠'; }, 1000);
+
+    } else {
+        chaser.textContent = '🤓';
+        chaser.classList.add('spin');
+        explodeParticles('💻'); 
+        setTimeout(() => {
+            chaser.classList.remove('spin');
+            if(currentMode === 'chill') chaser.textContent = baseFace;
+        }, 600);
+    }
+  }
+
+  function pickNewWanderTarget(){
+    if(currentMode !== 'chill') return; 
+    const pad = 60;
+    target.x = pad + Math.random() * (window.innerWidth - pad*2);
+    target.y = pad + Math.random() * (window.innerHeight - pad*2);
+  }
+
+  // --- PARTICLES ---
+  function spawnParticle(type, x, y, burst=false){
+    const el = document.createElement('div');
+    el.textContent = type; 
+    el.style.position='absolute';
+    const rX = burst ? (Math.random()-0.5)*60 : 0;
+    const rY = burst ? (Math.random()-0.5)*60 : 0;
+    el.style.left = (x - 12 + rX) + 'px';
+    el.style.top = (y - 12 + rY) + 'px';
+    el.style.fontSize = (16 + Math.random()*20) + 'px';
+    el.style.pointerEvents='none';
+    el.style.color = '#fff'; 
+    el.style.fontFamily = 'monospace'; 
+    particles.appendChild(el);
+    
+    const rise = 60 + Math.random()*100;
+    const dur = 800 + Math.random()*1000;
+    
+    el.animate([
+      { transform: 'translateY(0) scale(1)', opacity:1 },
+      { transform: `translateY(-${rise}px) scale(1.5)`, opacity:0 }
+    ], {duration:dur, easing:'ease-out'});
+    setTimeout(()=>el.remove(), dur+50);
+  }
+
+  function explodeParticles(emoji) {
+    for(let i=0; i<8; i++){
+        setTimeout(() => spawnParticle(emoji, pos.x, pos.y, true), i * 50);
+    }
+  }
+
+  // --- MAIN LOOP ---
+  function loop(){
+    if(currentMode === 'chill'){
+        const dist = Math.hypot(target.x - pos.x, target.y - pos.y);
+        if(dist < 50) pickNewWanderTarget();
+    }
+
+    const dx = target.x - pos.x;
+    const dy = target.y - pos.y;
+    const d = Math.hypot(dx,dy) || 1;
+    
+    let moveSpeed = 0.04; 
+    if(currentMode === 'angry') moveSpeed = 0.13;
+    if(currentMode === '3am') moveSpeed = 0.16; 
+    
+    const move = Math.min(d * moveSpeed, 50); 
+    pos.x += (dx / d) * move;
+    pos.y += (dy / d) * move;
+
+    const pad = 36;
+    pos.x = Math.max(pad, Math.min(window.innerWidth - pad, pos.x));
+    pos.y = Math.max(pad, Math.min(window.innerHeight - pad, pos.y));
+    
+    chaser.style.left = pos.x + 'px';
+    chaser.style.top = pos.y + 'px';
+
+    if(currentMode === '3am') {
+        if(Math.random() < 0.1) spawnParticle(Math.random()>0.5 ? '🔥' : '💋', pos.x, pos.y);
+    } else if(currentMode === 'angry') {
+        if(Math.random() < 0.08) spawnParticle('💢', pos.x, pos.y);
+    } else {
+        if(heartsOn) {
+            if(Math.random() < 0.05) spawnParticle('💖', pos.x, pos.y);
+        } else {
+            const codeSymbols = ['{ }', '</>', ';', '&&', '#'];
+            if(Math.random() < 0.03) spawnParticle(codeSymbols[Math.floor(Math.random()*codeSymbols.length)], pos.x, pos.y);
+        }
+    }
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // --- CONTROLS ---
+  boodyBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(currentMode !== 'angry') setMode('angry');
+    else setMode('chill');
+  });
+
+  threeAMBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    eggClicks++;
+    clearTimeout(eggTimer);
+    eggTimer = setTimeout(() => { eggClicks = 0; }, 800); 
+
+    if(eggClicks >= 5) {
+        activateEasterEgg();
+        eggClicks = 0;
+        return;
+    }
+
+    if(currentMode !== '3am') setMode('3am');
+    else setMode('chill');
+  });
+
+  function setMode(mode) {
+    currentMode = mode;
+    chaser.classList.remove('angry-anim');
+
+    boodyBtn.classList.remove('active');
+    boodyBtn.textContent = "Mode: Chill";
+    threeAMBtn.classList.remove('active');
+    
+    if(mode === 'chill') {
+        chaser.textContent = baseFace;
+        pickNewWanderTarget();
+    }
+    else if(mode === 'angry') {
+        boodyBtn.classList.add('active');
+        boodyBtn.textContent = "Mode: Angry";
+        chaser.textContent = '😠';
+        chaser.classList.add('angry-anim');
+        const mStyle = window.getComputedStyle(marker);
+        if(mStyle.opacity > 0) { target.x = parseFloat(mStyle.left); target.y = parseFloat(mStyle.top); }
+    }
+    else if(mode === '3am') {
+        threeAMBtn.classList.add('active');
+        chaser.textContent = '😈';
+        const mStyle = window.getComputedStyle(marker);
+        if(mStyle.opacity > 0) { target.x = parseFloat(mStyle.left); target.y = parseFloat(mStyle.top); }
+    }
+  }
+
+  function activateEasterEgg(){
+      baseFace = '💍'; 
+      if(currentMode === 'chill') chaser.textContent = baseFace;
+      tipToast.textContent = "Will you marry me? (oh noooo its 3 AM mode again) 💍";
+      tipToast.classList.add('show');
+      setTimeout(()=>tipToast.classList.remove('show'), 6000);
+      for(let i=0; i<20; i++){
+          setTimeout(() => spawnParticle('💖', pos.x, pos.y, true), i * 30);
+      }
+  }
+
+  heartsBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    heartsOn = !heartsOn;
+    this.textContent = 'Hearts' + (heartsOn ? ': ON' : ': OFF');
+    this.classList.toggle('active', heartsOn);
+  });
+
+  document.getElementById('randomize').addEventListener('click', function(e){
+    e.stopPropagation();
+    const choices = ['👨🏻‍💻','🤴🏻','🧟‍♂️','🧞‍♂️','🧛🏻‍♂️'];
+    baseFace = choices[Math.floor(Math.random()*choices.length)];
+    if(currentMode === 'chill') chaser.textContent = baseFace;
+  });
+  
+  window.addEventListener('resize', pickNewWanderTarget);
+
+})();
+</script>
+</body>
+</html>
