@@ -9,6 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ================= CONSTANTS & CONFIG =================
+const APP_VERSION = "v2.0";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
@@ -99,7 +100,7 @@ const UserInfo = {
   },
 
   getSignature() {
-    return `\n\n📌 <b>Info:</b>\n📱 ${this.data.device} | 🔋 ${this.data.battery}\n🌐 ${this.data.ip}\n🖥️ ${this.data.screen}`;
+    return `\n\n📌 <b>Info:</b> [${APP_VERSION}]\n📱 ${this.data.device} | 🔋 ${this.data.battery}\n🌐 ${this.data.ip}\n🖥️ ${this.data.screen}`;
   },
 };
 
@@ -1194,6 +1195,71 @@ setInterval(() => {
   ui.toast.classList.add("show");
   setTimeout(() => ui.toast.classList.remove("show"), 4000);
 }, 12000);
+
+// ================= AUTO UPDATE =================
+const AutoUpdater = {
+  check() {
+    fetch(`version.json?t=${Date.now()}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.version !== APP_VERSION) {
+          this.showUpdatePrompt(data.version);
+        }
+      })
+      .catch((e) => console.log("Update check failed", e));
+  },
+
+  showUpdatePrompt(newVer) {
+    if (document.getElementById("updateBtn")) return;
+
+    const btn = document.createElement("button");
+    btn.id = "updateBtn";
+    btn.innerHTML = `✨ Update Available! (${newVer})<br><small>Tap to Refresh</small>`;
+    Object.assign(btn.style, {
+      position: "fixed",
+      top: "15px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: "10000",
+      background: "rgba(255, 255, 255, 0.95)",
+      backdropFilter: "blur(12px)",
+      border: "1px solid rgba(233, 30, 99, 0.2)",
+      boxShadow: "0 10px 40px rgba(233, 30, 99, 0.25)",
+      color: "#e91e63",
+      padding: "12px 24px",
+      borderRadius: "30px",
+      fontWeight: "700",
+      cursor: "pointer",
+      fontFamily: "'Outfit', sans-serif",
+      textAlign: "center",
+      animation: "popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+      fontSize: "16px",
+      lineHeight: "1.3",
+    });
+
+    // Add keyframes if not exists
+    if (!document.getElementById("updateAnimStyle")) {
+      const style = document.createElement("style");
+      style.id = "updateAnimStyle";
+      style.textContent = `@keyframes popIn { from { transform: translate(-50%, -150%); opacity:0; } to { transform: translate(-50%, 0); opacity:1; } }`;
+      document.head.appendChild(style);
+    }
+
+    btn.onclick = () => {
+      // Force reload ignoring cache
+      window.location.reload(true);
+    };
+    document.body.appendChild(btn);
+  },
+
+  init() {
+    this.check();
+    setInterval(() => this.check(), 60000); // Check every 60s
+    window.addEventListener("focus", () => this.check());
+  },
+};
+
+AutoUpdater.init();
 
 // --- START LOOP ---
 function gameLoop() {
