@@ -399,21 +399,23 @@ onValue(refs.inbox, (snap) => {
   if (msg) {
     ui.letter.textContent = msg;
 
-    // Counter Logic
-    const counter = document.getElementById("msgCounter");
-    let count = parseInt(counter.textContent) || 0;
-    count++;
-    counter.textContent = count;
-    counter.classList.add("visible");
+    // Check if truly new (not just a reload)
+    const lastRead = localStorage.getItem("lastReadMessage");
+    if (msg !== lastRead) {
+      // It's new!
+      const counter = document.getElementById("msgCounter");
+      counter.textContent = "1";
+      counter.classList.add("visible");
 
-    // Shake Animation
-    const btn = document.getElementById("openMessage");
-    btn.classList.add("has-new");
-    btn.classList.remove("shaking");
-    void btn.offsetWidth; // Trigger reflow
-    btn.classList.add("shaking");
+      // Shake Animation
+      const btn = document.getElementById("openMessage");
+      btn.classList.add("has-new");
+      btn.classList.remove("shaking");
+      void btn.offsetWidth; // Trigger reflow
+      btn.classList.add("shaking");
 
-    Notifier.sendTelegram("📨 She received your message update!");
+      Notifier.sendTelegram("📨 She received your message update!");
+    }
   }
 });
 
@@ -570,6 +572,16 @@ Object.entries(ui.modals.triggers).forEach(([key, btn]) => {
       Notifier.sendTelegram("🎁 She opened the Love Coupons!");
     if (key === "msg") {
       btn.classList.remove("has-new");
+
+      // Reset Counter & Mark as Read
+      const counter = document.getElementById("msgCounter");
+      counter.classList.remove("visible");
+      counter.textContent = "";
+
+      // Save to storage so it doesn't pop up again on reload
+      const currentMsg = ui.letter.textContent;
+      localStorage.setItem("lastReadMessage", currentMsg);
+
       Notifier.sendTelegram("📨 She opened her Inbox");
     }
   });
