@@ -481,13 +481,16 @@ function handleAction(type) {
 }
 
 // Bind Buttons
+// "Send to Him" implies action FROM HER
 ui.btns.him.addEventListener("click", (e) => {
   e.stopPropagation();
-  handleAction("him");
+  handleAction("her");
 });
+
+// "Send to Her" implies action FROM HIM
 ui.btns.her.addEventListener("click", (e) => {
   e.stopPropagation();
-  handleAction("her");
+  handleAction("him");
 });
 
 // Settings
