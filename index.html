@@ -5,28 +5,38 @@
     <meta charset="utf-8" />
     <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>For My Girl ❤️</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <div class="stage" id="stage">
+    <main class="stage" id="stage">
         <div class="particles" id="particles"></div>
         <div id="targetMarker" class="target-marker"></div>
 
-        <div class="top-bar">
-            <button class="top-btn" id="openHint">🎁</button>
+        <header class="top-bar">
+            <button class="top-btn" id="openHint" aria-label="Hints">🎁</button>
 
             <div class="stats-pill">
                 <div class="stat-item s-pink"><small>From Her</small><span id="receivedDisplay">...</span></div>
                 <div class="stat-item s-blue"><small>From Him</small><span id="sentDisplay">...</span></div>
             </div>
 
-            <button class="top-btn message-btn" id="openMessage">💌</button>
-        </div>
+            <button class="top-btn message-btn" id="openMessage" aria-label="Messages">💌</button>
+        </header>
 
-        <div class="bottom-area">
+        <section class="game-area">
+            <div id="chaser" class="chaser face">👨🏻‍💻</div>
 
+            <div class="card" id="card">
+                <h1>Hey beautiful!</h1>
+                <p>Tap anywhere to call me.</p>
+            </div>
+        </section>
+
+        <footer class="bottom-area">
             <div class="settings-menu" id="settingsMenu">
                 <button class="menu-btn" id="toggleBoody">Mode: Chill</button>
                 <button class="menu-btn purple-mode" id="toggleThreeAM">3 A.M. Mode 😈</button>
@@ -34,15 +44,16 @@
                 <button class="menu-btn" id="randomize">Randomize Face</button>
             </div>
 
-            <button class="settings-trigger" id="settingsTrigger">⚙️</button>
+            <button class="settings-trigger" id="settingsTrigger" aria-label="Settings">⚙️</button>
 
             <div class="send-row">
                 <button class="big-btn" id="sendToHimBtn">Send to Him 💋</button>
                 <button class="big-btn" id="sendToHerBtn">Send to Her 💌</button>
             </div>
-        </div>
+        </footer>
 
-        <div class="modal-box" id="hintBox">
+        <!-- Modals -->
+        <div class="modal-box" id="hintBox" aria-hidden="true">
             <h2>🎁 Secret Hints</h2>
             <ul class="hint-list">
                 <li><strong>The Proposal 💍</strong>Tap "3 A.M. Mode" 5 times quickly.</li>
@@ -52,21 +63,14 @@
             <button class="close-btn" id="closeHint">Got it!</button>
         </div>
 
-        <div class="modal-box" id="messageBox">
+        <div class="modal-box" id="messageBox" aria-hidden="true">
             <h2>💌 New Message</h2>
             <div class="letter-content" id="letterText"></div>
             <button class="close-btn" id="closeMessage">Close</button>
         </div>
 
-        <div id="chaser" class="chaser face">👨🏻‍💻</div>
-
-        <div class="card" id="card">
-            <h1>Hey beautiful!</h1>
-            <p>Tap anywhere to call me.</p>
-        </div>
-
         <div id="tipToast" class="tip-toast">Remember to drink water! 💧</div>
-    </div>
+    </main>
 
     <script type="module" src="script.js"></script>
 </body>
