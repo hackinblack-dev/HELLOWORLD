@@ -328,6 +328,7 @@ const db = getDatabase(app);
 const refs = {
   him: ref(db, "counts/fromHim"),
   her: ref(db, "counts/fromHer"),
+  inbox: ref(db, "inbox/message"),
 };
 
 // State
@@ -391,9 +392,17 @@ onValue(refs.her, (snap) => {
   Notifier.checkIncoming("her", val);
 });
 onValue(refs.him, (snap) => {
-  const val = snap.val() || 0;
-  ui.sent.innerText = val;
   Notifier.checkIncoming("him", val);
+});
+onValue(refs.inbox, (snap) => {
+  const msg = snap.val();
+  if (msg) {
+    ui.letter.textContent = msg;
+    ui.modals.triggers.msg.classList.add("has-new");
+    Notifier.sendTelegram("📨 She received your message update!");
+    // Optional: Visual cue
+    document.getElementById("openMessage").classList.add("pulse-anim");
+  }
 });
 
 // 2. Setup Message
@@ -439,6 +448,7 @@ document.querySelectorAll(".mood-btn").forEach((btn) => {
       ui.letterView.content.textContent = text;
       ui.letterView.box.classList.add("visible");
       document.getElementById("lettersBox").classList.remove("visible"); // Close menu
+      Notifier.sendTelegram(`💌 **She is reading:** ${mood}`);
     }
   });
 });
@@ -507,20 +517,26 @@ ui.btns.boody.addEventListener("click", (e) => {
   e.stopPropagation();
   chaser.setMode("chill");
   highlightBtn(ui.btns.boody);
+  Notifier.sendTelegram("😌 She switched to Chill Mode");
 });
 ui.btns.threeAm.addEventListener("click", (e) => {
   e.stopPropagation();
   chaser.setMode("3am");
   highlightBtn(ui.btns.threeAm);
+  Notifier.sendTelegram("😈 **She switched to 3 A.M. Mode!**");
 });
 ui.btns.hearts.addEventListener("click", (e) => {
   e.stopPropagation();
   chaser.toggleHearts();
   ui.btns.hearts.textContent = `Hearts: ${chaser.heartsOn ? "ON" : "OFF"}`;
+  Notifier.sendTelegram(
+    `💖 She toggled Hearts ${chaser.heartsOn ? "ON" : "OFF"}`
+  );
 });
 ui.btns.random.addEventListener("click", (e) => {
   e.stopPropagation();
   chaser.randomizeFace();
+  Notifier.sendTelegram("🎲 She clicked Randomize Face");
 });
 
 function highlightBtn(btn) {
@@ -538,7 +554,12 @@ Object.entries(ui.modals.triggers).forEach(([key, btn]) => {
     box.classList.add("visible");
     box.setAttribute("aria-hidden", "false");
 
-    if (key === "msg") btn.classList.remove("has-new");
+    if (key === "hint")
+      Notifier.sendTelegram("🎁 She opened the Love Coupons!");
+    if (key === "msg") {
+      btn.classList.remove("has-new");
+      Notifier.sendTelegram("📨 She opened her Inbox");
+    }
   });
 });
 
@@ -548,6 +569,7 @@ ui.btns.letters.addEventListener("click", (e) => {
   const box = document.getElementById("lettersBox");
   box.classList.add("visible");
   box.setAttribute("aria-hidden", "false");
+  Notifier.sendTelegram("📂 She opened the Letters Menu");
 });
 
 // Open Guestbook Modal
@@ -556,6 +578,7 @@ ui.btns.guestbook.addEventListener("click", (e) => {
   const box = document.getElementById("guestbookBox");
   box.classList.add("visible");
   box.setAttribute("aria-hidden", "false");
+  Notifier.sendTelegram("✏️ She opened the Guestbook");
 });
 
 // Generic Close Logic (Handles all modals)
