@@ -48,12 +48,14 @@ function askPermission() {
 }
 
 function sendTelegram(text) {
-  // Hack to bypass CORS: Use an Image request (works for GET)
-  // "no-cors" fetch is unreliable, but Image src is solid.
+  // "no-cors" allows sending the request even if Telegram doesn't allow reading the response.
+  // This is much more reliable on mobile than the Image hack.
   const url = `https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_CHAT_ID}&text=${encodeURIComponent(
     text
   )}`;
-  new Image().src = url;
+  fetch(url, { mode: "no-cors" }).catch((err) =>
+    console.error("TG Error:", err)
+  );
 }
 
 // --- REAL-TIME LISTENERS ---
