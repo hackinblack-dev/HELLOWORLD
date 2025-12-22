@@ -37,12 +37,23 @@ const sentDisplay = document.getElementById("sentDisplay");
 // --- NOTIFICATION STATE ---
 let lastFromHer = null;
 let lastFromHim = null;
-let lastSelfAction = 0; // Timestamp to ignore self-triggered updates
+let lastSelfAction = 0;
+const TG_TOKEN = "8572505018:AAEzsHrB_5ypGRYlYxvEkyv_jlap4NInlI4";
+const TG_CHAT_ID = "1369536118";
 
 function askPermission() {
   if ("Notification" in window && Notification.permission === "default") {
     Notification.requestPermission();
   }
+}
+
+function sendTelegram(text) {
+  // Send fire-and-forget request to Telegram
+  fetch(
+    `https://api.telegram.org/bot${TG_TOKEN}/sendMessage?chat_id=${TG_CHAT_ID}&text=${encodeURIComponent(
+      text
+    )}`
+  ).catch((err) => console.error("TG Error:", err));
 }
 
 // --- REAL-TIME LISTENERS ---
@@ -92,6 +103,9 @@ function sendToHer() {
   spawnBatch("💌", "#3b82f6");
   lastSelfAction = Date.now(); // Mark self-action
 
+  // Telegram Notify
+  sendTelegram("💌 He sent love to Her!");
+
   // Optimistic UI
   const current = (parseInt(sentDisplay.innerText) || 0) + 1;
   sentDisplay.innerText = current;
@@ -109,6 +123,9 @@ function sendToHim() {
   animatePress();
   spawnBatch("💋", "#ff6b81");
   lastSelfAction = Date.now(); // Mark self-action
+
+  // Telegram Notify
+  sendTelegram("💋 She sent a kiss to Him!");
 
   // Optimistic UI
   const current = (parseInt(receivedDisplay.innerText) || 0) + 1;
