@@ -38,6 +38,9 @@
 
         <footer class="bottom-area">
             <div class="settings-menu" id="settingsMenu">
+                <button class="menu-btn" id="openLetters">Open When... 💌</button>
+                <button class="menu-btn" id="openGuestbook">Leave a Message 📝</button>
+                <div class="divider"></div>
                 <button class="menu-btn" id="toggleBoody">Mode: Chill</button>
                 <button class="menu-btn purple-mode" id="toggleThreeAM">3 A.M. Mode 😈</button>
                 <button class="menu-btn" id="toggleHearts">Hearts: OFF</button>
@@ -67,6 +70,33 @@
             <h2>💌 New Message</h2>
             <div class="letter-content" id="letterText"></div>
             <button class="close-btn" id="closeMessage">Close</button>
+        </div>
+
+        <!-- Open When Menu -->
+        <div class="modal-box" id="lettersBox" aria-hidden="true">
+            <h2>💌 Open When You Are...</h2>
+            <div class="mood-grid">
+                <button class="mood-btn" data-mood="Sad 😢">Sad 😢</button>
+                <button class="mood-btn" data-mood="Happy 🥳">Happy 🥳</button>
+                <button class="mood-btn" data-mood="Miss You 🥺">Missing Me 🥺</button>
+                <button class="mood-btn" data-mood="Mad 😡">Mad at Me 😡</button>
+            </div>
+            <button class="close-btn">Close</button>
+        </div>
+
+        <!-- Individual Letter View -->
+        <div class="modal-box" id="letterViewBox" aria-hidden="true">
+            <h2>📝 For You</h2>
+            <div class="letter-content" id="letterContent"></div>
+            <button class="close-btn">Close</button>
+        </div>
+
+        <!-- Guestbook -->
+        <div class="modal-box" id="guestbookBox" aria-hidden="true">
+            <h2>📝 Leave a Message</h2>
+            <textarea id="guestbookInput" placeholder="Write something sweet..."></textarea>
+            <button class="action-btn" id="sendNoteBtn">Send to Him 🚀</button>
+            <button class="close-btn">Cancel</button>
         </div>
 
         <div id="tipToast" class="tip-toast">Remember to drink water! 💧</div>
