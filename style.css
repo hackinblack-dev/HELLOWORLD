@@ -179,13 +179,12 @@ body {
   display: flex;
 }
 .message-btn.has-new {
-  /* Only border color change, shake handled via class */
   border-color: var(--c-pink);
+  background: rgba(255, 107, 129, 0.2);
+  animation: shake-bell 3s infinite; /* Periodic Shake */
 }
 
-.message-btn.shaking {
-  animation: shake-bell 0.8s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-}
+/* Removed separate .shaking class as .has-new handles it now */
 
 .msg-counter {
   position: absolute;
@@ -210,25 +209,30 @@ body {
 }
 
 @keyframes shake-bell {
-  0%,
-  100% {
+  0% {
     transform: rotate(0);
+  }
+  5% {
+    transform: rotate(-10deg);
+  }
+  10% {
+    transform: rotate(10deg);
   }
   15% {
     transform: rotate(-10deg);
   }
-  30% {
+  20% {
     transform: rotate(10deg);
   }
-  45% {
-    transform: rotate(-10deg);
-  }
-  60% {
-    transform: rotate(10deg);
-  }
-  75% {
+  25% {
     transform: rotate(-5deg);
   }
+  30% {
+    transform: rotate(0);
+  }
+  100% {
+    transform: rotate(0);
+  } /* Long Pause */
 }
 
 /* Stats Pill */

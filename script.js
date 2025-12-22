@@ -392,6 +392,8 @@ onValue(refs.her, (snap) => {
   Notifier.checkIncoming("her", val);
 });
 onValue(refs.him, (snap) => {
+  const val = snap.val() || 0;
+  ui.sent.innerText = val;
   Notifier.checkIncoming("him", val);
 });
 onValue(refs.inbox, (snap) => {
