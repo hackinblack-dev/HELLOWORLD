@@ -101,12 +101,53 @@
         <div class="modal-box" id="guestbookBox" aria-hidden="true">
             <h2>📝 Leave a Message</h2>
             <textarea id="guestbookInput" placeholder="Write something sweet..."></textarea>
+
+            <!-- Doodle Launcher -->
+            <div class="doodle-launcher" id="doodleLauncher">
+                <div id="doodlePlaceholder" class="doodle-placeholder">
+                    <span>🎨</span>
+                    <p>Tap to Draw</p>
+                </div>
+                <img id="doodleThumbnail" class="doodle-thumbnail" aria-hidden="true" />
+                <div class="launcher-controls">
+                    <button type="button" id="btnEditDoodle" class="edit-doodle-btn">Edit</button>
+                    <button type="button" id="btnDeleteDoodle" class="delete-doodle-btn">🗑️</button>
+                </div>
+            </div>
+
             <button class="action-btn" id="sendNoteBtn">Send to Him 🚀</button>
             <button class="close-btn">Cancel</button>
         </div>
 
         <div id="tipToast" class="tip-toast">Remember to drink water! 💧</div>
     </main>
+
+    <!-- Fullscreen Doodle Editor (Hidden by default) -->
+    <div class="doodle-overlay hidden" id="doodleOverlay">
+        <div class="doodle-toolbar" id="doodleToolbar">
+            <button id="toggleTools" class="tool-btn" title="Minimize/Expand">🔽</button>
+            <div class="tool-group">
+                <button id="doneDoodle" class="done-btn">✅ Done</button>
+            </div>
+            <div class="tool-group">
+                <input type="color" id="penColor" value="#e91e63">
+                <div class="presets">
+                    <button class="color-preset" style="background:#e91e63" data-color="#e91e63"></button>
+                    <button class="color-preset" style="background:#0f172a" data-color="#0f172a"></button>
+                    <button class="color-preset" style="background:#ffffff" data-color="#ffffff"></button>
+                </div>
+            </div>
+            <div class="tool-group">
+                <button id="sizeMinus" class="tool-btn">➖</button>
+                <button id="sizePlus" class="tool-btn">➕</button>
+            </div>
+            <div class="tool-group">
+                <input type="color" id="bgColor" value="#ffffff" title="Background">
+            </div>
+            <button id="clearDoodle" class="tool-btn">🗑️</button>
+        </div>
+        <canvas id="doodleCanvas"></canvas>
+    </div>
 
     <script type="module" src="script.js"></script>
 </body>

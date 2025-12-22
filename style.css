@@ -594,14 +594,343 @@ textarea {
   transform: scale(0.98);
 }
 
-.divider {
+/* ================= DOODLE LAUNCHER ================= */
+.doodle-launcher {
+  margin-bottom: 20px;
+  position: relative;
   width: 100%;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 5px 0;
+  height: 140px; /* Slightly taller */
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* ================= TOAST ================= */
+.doodle-launcher:active {
+  transform: scale(0.98);
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.doodle-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  gap: 10px;
+  transition: opacity 0.2s;
+}
+.doodle-placeholder span {
+  font-size: 28px;
+  filter: grayscale(1);
+  transition: 0.3s;
+}
+.doodle-placeholder p {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+.doodle-launcher:hover .doodle-placeholder span {
+  filter: grayscale(0);
+  transform: scale(1.1);
+}
+
+.doodle-thumbnail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.05);
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.doodle-thumbnail.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Launcher Controls (Edit/Delete) */
+.launcher-controls {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: all 0.3s;
+}
+
+.doodle-thumbnail.visible ~ .launcher-controls {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.edit-doodle-btn,
+.delete-doodle-btn {
+  border: none;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+.edit-doodle-btn {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--bg-dark);
+}
+.delete-doodle-btn {
+  background: rgba(244, 63, 94, 0.9);
+  color: white;
+}
+.edit-doodle-btn:active,
+.delete-doodle-btn:active {
+  transform: scale(0.9);
+}
+
+/* ================= DOODLE OVERLAY (PREMIUM EDITOR) ================= */
+.doodle-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2000;
+  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.95);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.doodle-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+/* Premium Toolbar */
+.doodle-toolbar {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: 95%;
+  max-width: 680px;
+  z-index: 10;
+
+  display: flex;
+  flex-wrap: nowrap; /* Try to keep on one line */
+  align-items: center;
+  justify-content: space-between; /* Spread out */
+  gap: 12px;
+
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 16px;
+  border-radius: 24px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+
+  overflow-x: auto; /* Scroll if too small */
+  padding-bottom: 10px; /* Space for scrollbar if needed */
+}
+
+/* Hide scrollbar */
+.doodle-toolbar::-webkit-scrollbar {
+  display: none;
+}
+.doodle-toolbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.tool-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+.done-btn {
+  background: linear-gradient(
+    135deg,
+    var(--c-purple) 0%,
+    var(--c-purple-dark) 100%
+  );
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 16px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.done-btn:active {
+  transform: scale(0.96);
+  filter: brightness(1.1);
+}
+
+/* Color Pickers */
+input[type="color"] {
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+  -webkit-appearance: none;
+  transition: transform 0.2s;
+}
+input[type="color"]:active {
+  transform: scale(0.9);
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.presets {
+  display: flex;
+  gap: 8px;
+  margin-left: 4px;
+}
+.color-preset {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.color-preset::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+.color-preset:active {
+  transform: scale(0.8);
+}
+
+/* Circle Buttons (+ - Trash) */
+.tool-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%; /* Circle */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.tool-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.9);
+}
+
+#clearDoodle {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.3);
+  color: var(--c-red);
+}
+#clearDoodle:active {
+  background: rgba(244, 63, 94, 0.3);
+}
+
+/* Canvas Fullscreen */
+#doodleCanvas {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+  background: white; /* Ensure bg is white initially */
+}
+
+/* Minimized Toolbar State */
+.doodle-toolbar.minimized {
+  width: 48px;
+  height: 48px;
+  max-width: none;
+  padding: 0;
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+
+  /* Reset positioning for drag */
+  transform: none;
+  left: 20px; /* Default start pos if reset */
+  top: 20px;
+
+  touch-action: none; /* Prevent scroll while dragging */
+  cursor: grab;
+}
+
+.doodle-toolbar.minimized:active {
+  cursor: grabbing;
+}
+
+.doodle-toolbar.minimized > *:not(#toggleTools) {
+  display: none !important;
+}
+
+.doodle-toolbar.minimized #toggleTools {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  pointer-events: none; /* Let parent handle events */
+}
+
+/* Hide Toast Initially */
 .tip-toast {
   position: fixed;
   bottom: 180px;

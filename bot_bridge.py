@@ -1,16 +1,17 @@
 import logging
 import requests
 import json
+import base64
+import time
+import asyncio
+from io import BytesIO
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # ================= CONFIG =================
-# Telegram Bot Token (Same as in script.js or new one)
 TELEGRAM_TOKEN = "8572505018:AAEzsHrB_5ypGRYlYxvEkyv_jlap4NInlI4"
-
-# Firebase Realtime Database URL
-# Note: Using your Project ID. If this 404s, check Firebase Console for exact URL.
-FIREBASE_URL = "https://counter-72c46-default-rtdb.firebaseio.com/inbox/message.json"
+TELEGRAM_CHAT_ID = "1369536118" # Your Chat ID to send photos to
+FIREBASE_URL = "https://counter-72c46-default-rtdb.firebaseio.com"
 
 # ================= LOGGING =================
 logging.basicConfig(
@@ -19,45 +20,84 @@ logging.basicConfig(
 )
 
 # ================= HANDLERS =================
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Hello! I am the Love Bridge Bot.\n"
-        "Use /m <message> to send a message to her inbox!\n"
-        "Example: /m I love you! ❤️"
+        "Use /m <message> to send a message to her inbox!"
     )
 
 async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Get text after /m
     if not context.args:
-        await update.message.reply_text("⚠️ Please type a message! Example: /m Miss you!")
+        await update.message.reply_text("⚠️ Type a message! Ex: /m Love you!")
         return
+    
+    msg = ' '.join(context.args)
+    url = f"{FIREBASE_URL}/inbox/message.json"
+    requests.put(url, json=msg)
+    await update.message.reply_text(f"✅ Sent: \"{msg}\"")
 
-    message_text = ' '.join(context.args)
-    user_name = update.effective_user.first_name
-
-    logging.info(f"Sending message from {user_name}: {message_text}")
-
-    # Send to Firebase (PUT replaces the current value)
+# ================= BACKGROUND SYNC =================
+async def sync_doodles(context: ContextTypes.DEFAULT_TYPE):
+    """Checks for unsent doodles in Firebase"""
     try:
-        response = requests.put(FIREBASE_URL, json=message_text)
-        
-        if response.status_code == 200:
-            await update.message.reply_text(f"✅ Sent: \"{message_text}\"")
-        else:
-            await update.message.reply_text(f"❌ Firebase Error: {response.status_code}")
-            logging.error(f"Firebase Error: {response.text}")
-            
+        url = f"{FIREBASE_URL}/guestbook.json"
+        # Order by key limit to last 10 to avoid huge fetches
+        r = requests.get(url + '?orderBy="$key"&limitToLast=10') 
+        data = r.json()
+
+        if not data: return
+
+        for key, entry in data.items():
+            if isinstance(entry, dict) and entry.get("image") and entry.get("sentToTelegram") == False:
+                logging.info(f"Found pending doodle: {key}")
+                
+                # 1. Decode Image
+                base64_str = entry["image"].split(",")[1] # Remove data:image/png;base64,
+                image_data = base64.b64decode(base64_str)
+                
+                # 2. Send to Telegram
+                caption = f"🎨 Recovered Doodle\n📝 {entry.get('text', '')}"
+                await context.bot.send_photo(
+                    chat_id=TELEGRAM_CHAT_ID,
+                    photo=BytesIO(image_data),
+                    caption=caption
+                )
+                
+                # 3. Mark as Sent
+                requests.patch(f"{FIREBASE_URL}/guestbook/{key}.json", json={"sentToTelegram": True})
+                logging.info(f"Synced {key}")
+                
     except Exception as e:
-        await update.message.reply_text(f"❌ Error: {str(e)}")
-        logging.error(f"Exception: {str(e)}")
+        logging.error(f"Sync Error: {str(e)}")
 
 # ================= MAIN =================
 if __name__ == '__main__':
-    application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    # 1. Start HTTP Server in Background
+    import http.server
+    import socketserver
+    import threading
+
+    PORT = 8000
+    Handler = http.server.SimpleHTTPRequestHandler
+
+    def run_server():
+        with socketserver.TCPServer(("", PORT), Handler) as httpd:
+            print(f"🌍 Website live at: http://localhost:{PORT}")
+            httpd.serve_forever()
+
+    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread.start()
+
+    # 2. Start Telegram Bot
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("m", send_message))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("m", send_message))
+    
+    # Add Job Queue for Syncing
+    job_queue = app.job_queue
+    job_queue.run_repeating(sync_doodles, interval=10, first=5)
     
     print("🚀 Bot Bridge is running...")
-    application.run_polling()
+    print(f"👉 Open your browser at: http://localhost:{PORT}")
+    app.run_polling()

