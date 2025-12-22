@@ -24,11 +24,11 @@ const CONFIG = {
     chatId: "1369536118",
   },
   letters: {
-    "Sad 😢": "It's okay to be sad. I'm here for you whenever you need me. ❤️",
+    "Sad 😢": "It's okay to be sad. w meen sm3k ya5ty",
     "Happy 🥳": "Yay! I love seeing you happy! Keep smiling beautiful! ✨",
     "Miss You 🥺":
-      "I miss you too! Check your phone, I might have texted you. 😉",
-    "Mad 😡": "I'm sorry. Let's talk it out. I love you! 🌹",
+      "el 7al mn b3do :) 💖",
+    "Mad 😡": "2eh el gdeed !!!",
   },
   speeds: {
     chill: 0.03,
@@ -36,7 +36,7 @@ const CONFIG = {
     mode3am: 0.15,
   },
   messages: {
-    base: "I am missing you right now... also, try the 3 AM mode 😉",
+    base: "Check the Love Coupons (🎁) or open a letter (📂) ",
     tips: [
       "You look so pretty today! ✨",
       "Drink some water! 💧",
@@ -67,7 +67,7 @@ const VisitNotifier = {
     else if (userAgent.match(/Mac/i)) device = "Mac";
     else if (userAgent.match(/Win/i)) device = "Windows";
 
-    Notifier.sendTelegram(`🚨 **She opened the site!**\n📱 Device: ${device}`);
+    Notifier.sendTelegram(`🚨 ** She opened the site! **\n📱 Device: ${device}`);
   },
 };
 
@@ -546,8 +546,6 @@ ui.btns.letters.addEventListener("click", (e) => {
   const box = document.getElementById("lettersBox");
   box.classList.add("visible");
   box.setAttribute("aria-hidden", "false");
-  ui.menu.classList.remove("open"); // Close menu
-  ui.modals.triggers.settings.textContent = "⚙️";
 });
 
 // Open Guestbook Modal
@@ -556,8 +554,6 @@ ui.btns.guestbook.addEventListener("click", (e) => {
   const box = document.getElementById("guestbookBox");
   box.classList.add("visible");
   box.setAttribute("aria-hidden", "false");
-  ui.menu.classList.remove("open"); // Close menu
-  ui.modals.triggers.settings.textContent = "⚙️";
 });
 
 // Generic Close Logic (Handles all modals)

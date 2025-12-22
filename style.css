@@ -129,35 +129,42 @@ body {
 
 /* ================= TOP HEADER ================= */
 .top-bar {
-  position: fixed;
-  top: 0;
+  position: absolute;
+  top: env(safe-area-inset-top, 20px);
   left: 0;
   width: 100%;
+  padding: 10px 20px;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  padding: max(16px, var(--sa-top)) 20px 16px;
-  z-index: var(--z-ui);
-  pointer-events: none;
+  align-items: center;
+  z-index: 100;
+  pointer-events: none; /* Let clicks pass through gaps */
+}
+
+/* Groups for buttons */
+.top-left,
+.top-right {
+  display: flex;
+  gap: 12px;
+  pointer-events: auto;
 }
 
 .top-btn {
-  pointer-events: auto;
-  background: rgba(255, 255, 255, 0.08); /* More subtle */
-  backdrop-filter: blur(var(--blur-md));
-  -webkit-backdrop-filter: blur(var(--blur-md));
-  border: 1px solid var(--glass-border);
-  color: white;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid rgba(255, 255, 255, 0.3);
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  font-size: 20px;
+  font-size: 1.2rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  /* pointer-events: auto; removed as parent handles it now */
 }
 
 .top-btn:active {

@@ -17,14 +17,20 @@
         <div id="targetMarker" class="target-marker"></div>
 
         <header class="top-bar">
-            <button class="top-btn" id="openHint" aria-label="Hints">🎁</button>
+            <div class="top-left">
+                <button class="top-btn" id="openHint" aria-label="Gifts">🎁</button>
+                <button class="top-btn" id="openLetters" aria-label="Open When">📂</button>
+            </div>
 
             <div class="stats-pill">
                 <div class="stat-item s-pink"><small>From Her</small><span id="receivedDisplay">...</span></div>
                 <div class="stat-item s-blue"><small>From Him</small><span id="sentDisplay">...</span></div>
             </div>
 
-            <button class="top-btn message-btn" id="openMessage" aria-label="Messages">💌</button>
+            <div class="top-right">
+                <button class="top-btn" id="openGuestbook" aria-label="Guestbook">✏️</button>
+                <button class="top-btn message-btn" id="openMessage" aria-label="Messages">💌</button>
+            </div>
         </header>
 
         <section class="game-area">
@@ -38,9 +44,6 @@
 
         <footer class="bottom-area">
             <div class="settings-menu" id="settingsMenu">
-                <button class="menu-btn" id="openLetters">Open When... 💌</button>
-                <button class="menu-btn" id="openGuestbook">Leave a Message 📝</button>
-                <div class="divider"></div>
                 <button class="menu-btn" id="toggleBoody">Mode: Chill</button>
                 <button class="menu-btn purple-mode" id="toggleThreeAM">3 A.M. Mode 😈</button>
                 <button class="menu-btn" id="toggleHearts">Hearts: OFF</button>
@@ -57,13 +60,13 @@
 
         <!-- Modals -->
         <div class="modal-box" id="hintBox" aria-hidden="true">
-            <h2>🎁 Secret Hints</h2>
+            <h2>🎁 Love Coupons</h2>
             <ul class="hint-list">
-                <li><strong>The Proposal 💍</strong>Tap "3 A.M. Mode" 5 times quickly.</li>
-                <li><strong>The Spicy Catch 😈</strong>Catch me while in "3 A.M. Mode".</li>
-                <li><strong>The Risk Taker 🤬</strong>Tap me while I'm Angry.</li>
-            </ul>
-            <button class="close-btn" id="closeHint">Got it!</button>
+                <li><strong>Free Hug 🫂</strong>Redeemable anytime!</li>
+                <li><strong>Movie Night 🎬</strong>You pick the movie.</li>
+                <li><strong>Dinner Date 🍔</strong>My treat!</li>
+                        </ul>
+            <button class="close-btn" id="closeHint">Yay! ❤️</button>
         </div>
 
         <div class="modal-box" id="messageBox" aria-hidden="true">
