@@ -8,8 +8,8 @@ import {
   runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// ================= CONSTANTS & CONFIG =================
-const APP_VERSION = "v2.0";
+// ================= CONSTANTS & CONFIG ==================
+const APP_VERSION = "v2.1";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
