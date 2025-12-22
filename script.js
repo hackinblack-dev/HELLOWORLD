@@ -37,14 +37,14 @@ const sentDisplay = document.getElementById("sentDisplay");
 // --- REAL-TIME LISTENERS ---
 onValue(fromHerRef, (snapshot) => {
   const val = snapshot.val();
-  // Default to 518 if empty (Requested baseline)
-  receivedDisplay.innerText = val !== null ? val : 518;
+  if (val !== null) receivedDisplay.innerText = val;
+  else receivedDisplay.innerText = 0;
 });
 
 onValue(fromHimRef, (snapshot) => {
   const val = snapshot.val();
-  // Default to 510 if empty (Requested baseline)
-  sentDisplay.innerText = val !== null ? val : 510;
+  if (val !== null) sentDisplay.innerText = val;
+  else sentDisplay.innerText = 0;
 });
 
 function sendToHer() {
@@ -54,8 +54,7 @@ function sendToHer() {
   // Optimistic UI (optional with local events, but Firebase is fast)
   // increment "fromHim"
   runTransaction(fromHimRef, (currentCount) => {
-    // If null, start at 510
-    return (currentCount || 510) + 1;
+    return (currentCount || 0) + 1;
   }).then(() => {
     const hype = ["Sent!", "Miss u!", "Love it!", "More!", "❤️"];
     showFloatingAnim(hype[Math.floor(Math.random() * hype.length)], "#3b82f6");
@@ -68,8 +67,7 @@ function sendToHim() {
 
   // increment "fromHer"
   runTransaction(fromHerRef, (currentCount) => {
-    // If null, start at 518
-    return (currentCount || 518) + 1;
+    return (currentCount || 0) + 1;
   }).then(() => {
     const hype = ["Mwah!", "Kisses!", "Catch!", "Again!", "💋"];
     showFloatingAnim(hype[Math.floor(Math.random() * hype.length)], "#ff6b81");
