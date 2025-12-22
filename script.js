@@ -350,6 +350,8 @@ const ui = {
     threeAm: document.getElementById("toggleThreeAM"),
     hearts: document.getElementById("toggleHearts"),
     random: document.getElementById("randomize"),
+    letters: document.getElementById("openLetters"),
+    guestbook: document.getElementById("openGuestbook"),
   },
   modals: {
     hint: document.getElementById("hintBox"),
@@ -537,23 +539,43 @@ Object.entries(ui.modals.triggers).forEach(([key, btn]) => {
     if (key === "msg") btn.classList.remove("has-new");
   });
 });
-Object.values(ui.modals.closers).forEach((btn) => {
+
+// Open Letters Modal
+ui.btns.letters.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const box = document.getElementById("lettersBox");
+  box.classList.add("visible");
+  box.setAttribute("aria-hidden", "false");
+  ui.menu.classList.remove("open"); // Close menu
+  ui.modals.triggers.settings.textContent = "⚙️";
+});
+
+// Open Guestbook Modal
+ui.btns.guestbook.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const box = document.getElementById("guestbookBox");
+  box.classList.add("visible");
+  box.setAttribute("aria-hidden", "false");
+  ui.menu.classList.remove("open"); // Close menu
+  ui.modals.triggers.settings.textContent = "⚙️";
+});
+
+// Generic Close Logic (Handles all modals)
+document.querySelectorAll(".close-btn").forEach((btn) => {
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
     const box = btn.closest(".modal-box");
-    box.classList.remove("visible");
-    box.setAttribute("aria-hidden", "true");
+    if (box) {
+      box.classList.remove("visible");
+      box.setAttribute("aria-hidden", "true");
+    }
   });
 });
 
 // Global Click (Movement)
 window.addEventListener("click", (e) => {
-  // Check if modal open
-  if (
-    ui.modals.hint.classList.contains("visible") ||
-    ui.modals.msg.classList.contains("visible")
-  )
-    return;
+  // Check if any modal is open
+  if (document.querySelector(".modal-box.visible")) return;
 
   // Intro Card Dismiss
   if (!hasInteracted) {
