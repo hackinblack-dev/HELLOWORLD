@@ -4,6 +4,7 @@ import {
   getDatabase,
   ref,
   onValue,
+  push,
   runTransaction,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -22,11 +23,12 @@ const CONFIG = {
     token: "8572505018:AAEzsHrB_5ypGRYlYxvEkyv_jlap4NInlI4",
     chatId: "1369536118",
   },
-  sounds: {
-    pop: "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3",
-    success:
-      "https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3",
-    volume: 0.2,
+  letters: {
+    "Sad 😢": "It's okay to be sad. I'm here for you whenever you need me. ❤️",
+    "Happy 🥳": "Yay! I love seeing you happy! Keep smiling beautiful! ✨",
+    "Miss You 🥺":
+      "I miss you too! Check your phone, I might have texted you. 😉",
+    "Mad 😡": "I'm sorry. Let's talk it out. I love you! 🌹",
   },
   speeds: {
     chill: 0.03,
@@ -46,44 +48,28 @@ const CONFIG = {
   },
 };
 
-// ================= SOUND MANAGER =================
-class SoundManager {
-  constructor() {
-    this.enabled = true;
-    this.sounds = {};
-    this.init();
-  }
-
+// ================= VISIT NOTIFIER =================
+const VisitNotifier = {
   init() {
-    this.loadSound("pop", CONFIG.sounds.pop);
-    this.loadSound("success", CONFIG.sounds.success);
-  }
-
-  loadSound(name, url) {
-    const audio = new Audio(url);
-    audio.volume = CONFIG.sounds.volume;
-    // Preload
-    audio.load();
-    this.sounds[name] = audio;
-  }
-
-  play(name) {
-    if (!this.enabled || !this.sounds[name]) return;
-
-    // Clone node to allow overlapping sounds (rapid interaction)
-    const clone = this.sounds[name].cloneNode();
-    clone.volume = CONFIG.sounds.volume;
-
-    // Safety check for latency/interaction policies
-    const promise = clone.play();
-    if (promise !== undefined) {
-      promise.catch((error) => {
-        // Auto-play policy blocked or network error -> fail silently
-        // console.warn("Sound play failed:", error);
-      });
+    const lastVisit = sessionStorage.getItem("lastVisit");
+    if (!lastVisit) {
+      sessionStorage.setItem("lastVisit", Date.now());
+      this.sendAlert();
     }
-  }
-}
+  },
+
+  sendAlert() {
+    const { userAgent } = navigator;
+    let device = "Unknown Device";
+    if (userAgent.match(/iPhone/i)) device = "iPhone";
+    else if (userAgent.match(/iPad/i)) device = "iPad";
+    else if (userAgent.match(/Android/i)) device = "Android";
+    else if (userAgent.match(/Mac/i)) device = "Mac";
+    else if (userAgent.match(/Win/i)) device = "Windows";
+
+    Notifier.sendTelegram(`🚨 **She opened the site!**\n📱 Device: ${device}`);
+  },
+};
 
 // ================= PARTICLE SYSTEM =================
 class ParticleSystem {
@@ -353,6 +339,10 @@ const ui = {
   stage: document.getElementById("stage"),
   sent: document.getElementById("sentDisplay"),
   received: document.getElementById("receivedDisplay"),
+  guestbook: {
+    input: document.getElementById("guestbookInput"),
+    send: document.getElementById("sendNoteBtn"),
+  },
   btns: {
     him: document.getElementById("sendToHimBtn"),
     her: document.getElementById("sendToHerBtn"),
@@ -379,10 +369,15 @@ const ui = {
   card: document.getElementById("card"),
   menu: document.getElementById("settingsMenu"),
   letter: document.getElementById("letterText"),
+  letterView: {
+    box: document.getElementById("letterViewBox"),
+    content: document.getElementById("letterContent"),
+    close: document.querySelector("#letterViewBox .close-btn"),
+  },
 };
 
 // Systems
-const sound = new SoundManager();
+// const sound = new SoundManager(); // Removed
 const particles = new ParticleSystem("particles");
 const chaser = new Chaser(document.getElementById("chaser"), particles);
 
@@ -404,13 +399,57 @@ onValue(refs.him, (snap) => {
 if (CONFIG.messages.base) {
   ui.modals.triggers.msg.classList.add("visible", "has-new");
   ui.letter.textContent = CONFIG.messages.base;
+  ui.letter.textContent = CONFIG.messages.base;
 }
+
+// Visit Notification
+VisitNotifier.init();
+
+// Guestbook Logic
+ui.guestbook.send.addEventListener("click", () => {
+  const msg = ui.guestbook.input.value.trim();
+  if (!msg) return;
+
+  // Optimistic UI
+  ui.guestbook.input.value = "";
+  const box = document.getElementById("guestbookBox");
+  box.classList.remove("visible");
+  box.setAttribute("aria-hidden", "true");
+
+  showFloatingAnim("Sent!", "#a855f7");
+  particles.spawnBatch("📝", 8);
+
+  // Send to Firebase
+  push(ref(db, "guestbook"), {
+    text: msg,
+    timestamp: Date.now(),
+  });
+
+  // Notify Telegram
+  Notifier.sendTelegram(`📝 **New Guestbook Message:**\n"${msg}"`);
+});
+
+// Letters Logic
+document.querySelectorAll(".mood-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const mood = btn.getAttribute("data-mood");
+    const text = CONFIG.letters[mood];
+    if (text) {
+      ui.letterView.content.textContent = text;
+      ui.letterView.box.classList.add("visible");
+      document.getElementById("lettersBox").classList.remove("visible"); // Close menu
+    }
+  });
+});
+ui.letterView.close.addEventListener("click", () => {
+  ui.letterView.box.classList.remove("visible");
+});
 
 // 3. User Interactions
 function handleAction(type) {
   Notifier.ask();
   Notifier.lastSelfAction = Date.now();
-  sound.play("pop");
+  // sound.play("pop");
 
   // UI Feedback
   animatePress();
@@ -423,7 +462,7 @@ function handleAction(type) {
     // Optimistic
     ui.sent.innerText = (parseInt(ui.sent.innerText) || 0) + 1;
     runTransaction(refs.him, (c) => (c || 0) + 1).then(() => {
-      sound.play("success");
+      // sound.play("success");
       showFloatingAnim("Sent!", "#3b82f6");
     });
   } else {
@@ -434,7 +473,7 @@ function handleAction(type) {
     // Optimistic
     ui.received.innerText = (parseInt(ui.received.innerText) || 0) + 1;
     runTransaction(refs.her, (c) => (c || 0) + 1).then(() => {
-      sound.play("success");
+      // sound.play("success");
       showFloatingAnim("Mwah!", "#ff6b81");
     });
   }
@@ -521,12 +560,12 @@ window.addEventListener("click", (e) => {
     hasInteracted = true;
     ui.card.style.opacity = "0";
     setTimeout(() => (ui.card.style.display = "none"), 500);
-    sound.init(); // Just to be sure, trying to unlock audio context
+    // sound.init();
   }
 
   if (e.target.id === "chaser") {
     chaser.handleInteract();
-    sound.play("pop");
+    // sound.play("pop");
     return;
   }
 
