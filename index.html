@@ -151,7 +151,28 @@
         <canvas id="doodleCanvas"></canvas>
     </div>
 
-    <script type="module" src="script.js?v=3"></script>
+    <script>
+        // Dynamic Script Loader to bypass cache automatically
+        (function() {
+            var timestamp = Date.now();
+            fetch('version.json?t=' + timestamp)
+                .then(r => r.json())
+                .then(data => {
+                    var v = data.version;
+                    var script = document.createElement('script');
+                    script.type = 'module';
+                    script.src = 'script.js?v=' + v; // Always matches server version
+                    document.body.appendChild(script);
+                })
+                .catch(e => {
+                    // Fallback if version.json fails
+                    var script = document.createElement('script');
+                    script.type = 'module';
+                    script.src = 'script.js?v=' + timestamp;
+                    document.body.appendChild(script);
+                });
+        })();
+    </script>
 </body>
 
 </html>

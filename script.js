@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ================= CONSTANTS & CONFIG ==================
-const APP_VERSION = "v2.2";
+const APP_VERSION = "v2.3";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
@@ -329,12 +329,6 @@ const Notifier = {
     }
   },
 
-  ask() {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  },
-
   sendTelegram(text) {
     // Append Info & Timestamp
     const time = new Date().toLocaleTimeString("en-US", {
@@ -362,12 +356,6 @@ const Notifier = {
     let lastVal = type === "her" ? this.lastHer : this.lastHim;
     if (lastVal !== null && val > lastVal) {
       // New Value!
-      if (Notification.permission === "granted") {
-        new Notification("💌 New Update!", {
-          body: type === "her" ? "She sent you a kiss!" : "He sent you love!",
-          icon: "https://fav.farm/💌",
-        });
-      }
     }
 
     if (type === "her") this.lastHer = val;
@@ -944,7 +932,6 @@ ui.letterView.close.addEventListener("click", () => {
 
 // 3. User Interactions
 function handleAction(type) {
-  Notifier.ask();
   Notifier.lastSelfAction = Date.now();
   // sound.play("pop");
 
