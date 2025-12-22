@@ -34,25 +34,68 @@ const fromHerRef = ref(db, "counts/fromHer");
 const receivedDisplay = document.getElementById("receivedDisplay");
 const sentDisplay = document.getElementById("sentDisplay");
 
+// --- NOTIFICATION STATE ---
+let lastFromHer = null;
+let lastFromHim = null;
+let lastSelfAction = 0; // Timestamp to ignore self-triggered updates
+
+function askPermission() {
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+
 // --- REAL-TIME LISTENERS ---
 onValue(fromHerRef, (snapshot) => {
-  const val = snapshot.val();
-  if (val !== null) receivedDisplay.innerText = val;
-  else receivedDisplay.innerText = 0;
+  const val = snapshot.val() || 0;
+  receivedDisplay.innerText = val;
+
+  // Notify if: New Value > Old, Old exists, and NOT triggered by me recently (<500ms)
+  if (
+    lastFromHer !== null &&
+    val > lastFromHer &&
+    Date.now() - lastSelfAction > 500
+  ) {
+    // "From Her" updated -> Usually means SHE sent something (or I received it)
+    if (Notification.permission === "granted")
+      new Notification("💌 New Love!", {
+        body: "She sent you a kiss!",
+        icon: "https://fav.farm/💋",
+      });
+  }
+  lastFromHer = val;
 });
 
 onValue(fromHimRef, (snapshot) => {
-  const val = snapshot.val();
-  if (val !== null) sentDisplay.innerText = val;
-  else sentDisplay.innerText = 0;
+  const val = snapshot.val() || 0;
+  sentDisplay.innerText = val;
+
+  // Notify if: New Value > Old, Old exists, and NOT triggered by me recently
+  if (
+    lastFromHim !== null &&
+    val > lastFromHim &&
+    Date.now() - lastSelfAction > 500
+  ) {
+    // "From Him" updated -> Usually means HE sent something (or I received it)
+    if (Notification.permission === "granted")
+      new Notification("💌 New Love!", {
+        body: "He sent you love!",
+        icon: "https://fav.farm/💌",
+      });
+  }
+  lastFromHim = val;
 });
 
 function sendToHer() {
+  askPermission(); // Ask on first interaction
   animatePress();
   spawnBatch("💌", "#3b82f6");
+  lastSelfAction = Date.now(); // Mark self-action
 
-  // Optimistic UI (optional with local events, but Firebase is fast)
-  // increment "fromHim"
+  // Optimistic UI
+  const current = (parseInt(sentDisplay.innerText) || 0) + 1;
+  sentDisplay.innerText = current;
+
   runTransaction(fromHimRef, (currentCount) => {
     return (currentCount || 0) + 1;
   }).then(() => {
@@ -62,10 +105,15 @@ function sendToHer() {
 }
 
 function sendToHim() {
+  askPermission(); // Ask on first interaction
   animatePress();
   spawnBatch("💋", "#ff6b81");
+  lastSelfAction = Date.now(); // Mark self-action
 
-  // increment "fromHer"
+  // Optimistic UI
+  const current = (parseInt(receivedDisplay.innerText) || 0) + 1;
+  receivedDisplay.innerText = current;
+
   runTransaction(fromHerRef, (currentCount) => {
     return (currentCount || 0) + 1;
   }).then(() => {
