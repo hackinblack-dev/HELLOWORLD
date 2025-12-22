@@ -398,10 +398,22 @@ onValue(refs.inbox, (snap) => {
   const msg = snap.val();
   if (msg) {
     ui.letter.textContent = msg;
-    ui.modals.triggers.msg.classList.add("has-new");
+
+    // Counter Logic
+    const counter = document.getElementById("msgCounter");
+    let count = parseInt(counter.textContent) || 0;
+    count++;
+    counter.textContent = count;
+    counter.classList.add("visible");
+
+    // Shake Animation
+    const btn = document.getElementById("openMessage");
+    btn.classList.add("has-new");
+    btn.classList.remove("shaking");
+    void btn.offsetWidth; // Trigger reflow
+    btn.classList.add("shaking");
+
     Notifier.sendTelegram("📨 She received your message update!");
-    // Optional: Visual cue
-    document.getElementById("openMessage").classList.add("pulse-anim");
   }
 });
 

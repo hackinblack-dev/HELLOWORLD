@@ -179,9 +179,56 @@ body {
   display: flex;
 }
 .message-btn.has-new {
-  background: rgba(255, 107, 129, 0.2);
+  /* Only border color change, shake handled via class */
   border-color: var(--c-pink);
-  animation: bounce 2s infinite;
+}
+
+.message-btn.shaking {
+  animation: shake-bell 0.8s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.msg-counter {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--c-red);
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-dark);
+  transform: scale(0);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.msg-counter.visible {
+  transform: scale(1);
+}
+
+@keyframes shake-bell {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  15% {
+    transform: rotate(-10deg);
+  }
+  30% {
+    transform: rotate(10deg);
+  }
+  45% {
+    transform: rotate(-10deg);
+  }
+  60% {
+    transform: rotate(10deg);
+  }
+  75% {
+    transform: rotate(-5deg);
+  }
 }
 
 /* Stats Pill */
