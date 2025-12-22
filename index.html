@@ -146,14 +146,22 @@
             <div class="tool-group">
                 <input type="color" id="bgColor" value="#ffffff" title="Background">
             </div>
+            <div class="tool-group">
+                <input type="file" id="imgUpload" accept="image/*" style="display:none">
+                <button id="btnUpload" class="tool-btn" title="Add Photo">📷</button>
+                <button id="btnMove" class="tool-btn" title="Move/Resize Photo" style="display:none">✋</button>
+            </div>
             <button id="clearDoodle" class="tool-btn">🗑️</button>
         </div>
-        <canvas id="doodleCanvas"></canvas>
+        <div id="doodleContainer" class="doodle-container">
+            <img id="doodleImg" class="doodle-img" src="" alt="">
+            <canvas id="doodleCanvas"></canvas>
+        </div>
     </div>
 
     <script>
         // Dynamic Script Loader to bypass cache automatically
-        (function() {
+        (function () {
             var timestamp = Date.now();
             fetch('version.json?t=' + timestamp)
                 .then(r => r.json())

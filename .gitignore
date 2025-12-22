@@ -1,0 +1,10 @@
+# Python
+*.py
+__pycache__/
+*.py[cod]
+*.session
+bot_bridge.py
+# Virtual Environment
+.venv/
+venv/
+env/

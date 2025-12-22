@@ -718,6 +718,7 @@ textarea {
   display: flex;
   flex-direction: column;
   opacity: 0;
+  visibility: hidden; /* Fix: Ensure it doesn't block clicks when hidden */
   pointer-events: none;
   transform: scale(0.95);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -725,6 +726,7 @@ textarea {
 
 .doodle-overlay.visible {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
   transform: scale(1);
 }
@@ -737,7 +739,8 @@ textarea {
   transform: translateX(-50%);
   width: 95%;
   max-width: 680px;
-  z-index: 10;
+  z-index: 2100; /* Higher than canvas (10) */
+  pointer-events: auto;
 
   display: flex;
   flex-wrap: nowrap; /* Try to keep on one line */
@@ -775,6 +778,12 @@ textarea {
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   flex-shrink: 0;
+
+  /* Prevent touches from reaching canvas */
+  touch-action: auto !important;
+  pointer-events: auto !important;
+  z-index: 2100; /* Higher than canvas */
+  position: relative;
 }
 
 .done-btn {
@@ -808,6 +817,7 @@ input[type="color"] {
   cursor: pointer;
   background: none;
   padding: 0;
+  appearance: none;
   -webkit-appearance: none;
   transition: transform 0.2s;
 }
@@ -1071,4 +1081,50 @@ input[type="color"]::-webkit-color-swatch {
 }
 .chaser.spin {
   animation: spin-happy 0.6s ease-in-out;
+}
+
+/* ================= DOODLE LAYERS ================= */
+.doodle-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: none; /* Prevent scrolling */
+}
+
+.doodle-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Start centered initially, logic handled in JS */
+  transform-origin: center center;
+  z-index: 5;
+  pointer-events: auto; /* Allow interaction in move mode */
+}
+
+#doodleCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+/* Interaction Modes */
+.mode-move #doodleCanvas {
+  pointer-events: none; /* Pass touches to image */
+  opacity: 0.6; /* Slight transparency to focus on image */
+}
+
+.mode-draw #doodleImg {
+  pointer-events: none; /* Pass touches to canvas (if overlapped) */
+}
+
+/* Button Active State */
+.tool-btn.active {
+  background: #e91e63;
+  color: white;
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(233, 30, 99, 0.4);
 }

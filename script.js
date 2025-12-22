@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ================= CONSTANTS & CONFIG ==================
-const APP_VERSION = "v2.3";
+const APP_VERSION = "v2.11";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
@@ -58,13 +58,30 @@ const UserInfo = {
     lang: navigator.language || "en",
     userAgent: navigator.userAgent,
     battery: "Unknown",
+    timezone: "Unknown",
+    cores: navigator.hardwareConcurrency || "Unknown",
+    memory: navigator.deviceMemory || "Unknown", // RAM in GB (approx)
+    connection: "Unknown",
   },
 
   async init() {
     this.parseDevice();
     this.getBattery();
+    this.getExtraDetails();
     await this.fetchIP();
     return this.data;
+  },
+
+  getExtraDetails() {
+    // Timezone
+    try {
+      this.data.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch (e) {}
+
+    // Connection (some browsers support this)
+    if (navigator.connection) {
+      this.data.connection = navigator.connection.effectiveType || "Unknown";
+    }
   },
 
   parseDevice() {
@@ -74,8 +91,12 @@ const UserInfo = {
     else if (ua.match(/Android/i)) this.data.device = "Android";
     else if (ua.match(/Mac/i)) this.data.device = "Mac";
     else if (ua.match(/Win/i)) this.data.device = "Windows";
-    else if (ua.match(/Linux/i)) this.data.device = "Linux"; // Added Linux
+    else if (ua.match(/Linux/i)) this.data.device = "Linux";
     else this.data.device = "Other";
+
+    // Detect exact OS version if possible (simple regex for iOS)
+    const match = ua.match(/OS (\d+_\d+)/);
+    if (match) this.data.device += ` (iOS ${match[1].replace("_", ".")})`;
   },
 
   async fetchIP() {
@@ -100,7 +121,7 @@ const UserInfo = {
   },
 
   getSignature() {
-    return `\n\n📌 <b>Info:</b> [${APP_VERSION}]\n📱 ${this.data.device} | 🔋 ${this.data.battery}\n🌐 ${this.data.ip}\n🖥️ ${this.data.screen}`;
+    return `\n\n📌 <b>Info:</b> [${APP_VERSION}]\n📱 ${this.data.device} | 🔋 ${this.data.battery}\n🌐 ${this.data.ip}\n🖥️ ${this.data.screen}\n🌍 ${this.data.timezone} | 🚀 ${this.data.cores} Cores`;
   },
 };
 
@@ -421,6 +442,31 @@ const ui = {
     toggleTools: document.getElementById("toggleTools"),
     launcher: document.getElementById("doodleLauncher"),
     thumb: document.getElementById("doodleThumbnail"),
+
+    // Stop Propagation on Toolbar
+    initToolbar() {
+      // Propagation stopped only on interactive children if needed,
+      // but stopping it on the container breaks the drag logic (which relies on document.mouseup).
+      // If we need to prevent clicks from passing through the toolbar to canvas:
+      // The toolbar handles its own events.
+      // We can stop prop on click/mousedown/touchstart to prevent drawing on canvas.
+      if (this.toolbar) {
+        // Prevent drawing when touching the toolbar
+        const stop = (e) => e.stopPropagation();
+        this.toolbar.addEventListener("mousedown", stop);
+        this.toolbar.addEventListener("touchstart", stop);
+        // We DO NOT stop mouseup/touchend/move here, because the Drag Logic needs them to bubble?
+        // Actually, dragging relies on 'document' listeners.
+        // But if we stop bubbling on the element, the event starts at element.
+        // Bubbling goes Element -> Parent -> Document.
+        // IF we stop propagation at Element, Document will NEVER see it.
+        // So 'onEnd' (attached to document) will never fire if released on toolbar.
+        // So:
+        this.toolbar.addEventListener("mousedown", (e) => e.stopPropagation());
+        this.toolbar.addEventListener("touchstart", (e) => e.stopPropagation());
+        this.toolbar.addEventListener("click", (e) => e.stopPropagation());
+      }
+    },
     done: document.getElementById("doneDoodle"),
     delDraft: document.getElementById("btnDeleteDoodle"),
     editDraft: document.getElementById("btnEditDoodle"),
@@ -431,6 +477,9 @@ const ui = {
     plus: document.getElementById("sizePlus"),
     minus: document.getElementById("sizeMinus"),
     presets: document.querySelectorAll(".color-preset"),
+    uploadBtn: document.getElementById("btnUpload"),
+    fileInput: document.getElementById("imgUpload"),
+    moveBtn: document.getElementById("btnMove"),
   },
   btns: {
     him: document.getElementById("sendToHimBtn"),
@@ -474,29 +523,42 @@ const chaser = new Chaser(document.getElementById("chaser"), particles);
 
 // ================= DOODLE BOARD =================
 // ================= DOODLE BOARD =================
+// ================= DOODLE BOARD =================
 class DoodleBoard {
   constructor(canvasId) {
+    this.container = document.getElementById("doodleContainer");
     this.canvas = document.getElementById(canvasId);
     this.ctx = this.canvas.getContext("2d");
+    this.imgElement = document.getElementById("doodleImg");
+
     this.isDrawing = false;
-    this.hasLoggedStart = false; // New Log flag
+    this.hasLoggedStart = false;
     this.bgColor = "#ffffff";
     this.penColor = "#e91e63";
     this.lineWidth = 5;
 
-    // Use CSS for visual background (instant change)
-    this.canvas.style.backgroundColor = this.bgColor;
+    // State
+    this.mode = "draw"; // 'draw' or 'move'
+    this.imgState = { x: 0, y: 0, scale: 1, rotation: 0 };
+    this.lastTouch = { x: 0, y: 0, d: 0 }; // For drag/pinch
+
+    // Use CSS for visual background
+    this.canvas.style.backgroundColor = "transparent"; // Canvas is top layer
+    this.container.style.backgroundColor = this.bgColor;
 
     this.setupEvents();
-    // Delay slightly to ensure layout is ready
+
+    // Delay to ensure layout
     setTimeout(() => this.resize(280, 150, true), 50);
   }
 
   setupEvents() {
+    // --- DRAWING LAYER (Canvas) ---
     // Mouse
-    this.canvas.addEventListener("mousedown", (e) =>
-      this.start(e.offsetX, e.offsetY)
-    );
+    this.canvas.addEventListener("mousedown", (e) => {
+      if (e.target !== this.canvas) return;
+      this.start(e.offsetX, e.offsetY);
+    });
     this.canvas.addEventListener("mousemove", (e) =>
       this.move(e.offsetX, e.offsetY)
     );
@@ -505,18 +567,205 @@ class DoodleBoard {
 
     // Touch
     this.canvas.addEventListener("touchstart", (e) => {
-      // Touch action handled in CSS
-      const pos = this.getTouchPos(e);
+      const pos = this.getTouchPos(e, this.canvas);
       this.start(pos.x, pos.y);
     });
     this.canvas.addEventListener("touchmove", (e) => {
       if (e.cancelable) e.preventDefault();
-      const pos = this.getTouchPos(e);
+      const pos = this.getTouchPos(e, this.canvas);
       this.move(pos.x, pos.y);
     });
     this.canvas.addEventListener("touchend", () => this.end());
+
+    // --- PHOTO LAYER (Image) ---
+    // Use Container for gestures to catch clicks outside the image too if needed,
+    // but binding to image allows direct manipulation.
+    // Let's bind to the container to allow dragging the image even if grabbing whitespace (optional),
+    // but effectively we want to move the IMG.
+
+    const handler = this.imgElement;
+
+    handler.addEventListener("touchstart", (e) => this.imgTouchStart(e), {
+      passive: false,
+    });
+    handler.addEventListener("touchmove", (e) => this.imgTouchMove(e), {
+      passive: false,
+    });
+    handler.addEventListener("touchend", () => this.imgTouchEnd());
+
+    // Mouse fallback for Move
+    handler.addEventListener("mousedown", (e) => {
+      this.lastTouch.x = e.clientX;
+      this.lastTouch.y = e.clientY;
+      this.isDraggingImg = true;
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!this.isDraggingImg || this.mode !== "move") return;
+      const dx = e.clientX - this.lastTouch.x;
+      const dy = e.clientY - this.lastTouch.y;
+      this.lastTouch.x = e.clientX;
+      this.lastTouch.y = e.clientY;
+      this.updateImgState(dx, dy, 0);
+    });
+    window.addEventListener("mouseup", () => (this.isDraggingImg = false));
+
+    // Wheel Zoom
+    this.container.addEventListener(
+      "wheel",
+      (e) => {
+        if (this.mode === "move") {
+          e.preventDefault();
+          const delta = e.deltaY > 0 ? -0.1 : 0.1;
+          this.scaleImage(delta);
+        }
+      },
+      { passive: false }
+    );
   }
 
+  // --- IMAGE LOGIC ---
+  scaleImage(delta) {
+    this.updateImgState(0, 0, delta);
+  }
+  setMode(mode) {
+    this.mode = mode;
+    this.container.classList.remove("mode-draw", "mode-move");
+    this.container.classList.add(`mode-${mode}`);
+
+    // Update Button UI
+    if (ui.guestbook.moveBtn) {
+      ui.guestbook.moveBtn.classList.toggle("active", mode === "move");
+      ui.guestbook.moveBtn.innerHTML = mode === "move" ? "✋" : "✏️";
+    }
+  }
+
+  loadImage(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.imgElement.src = e.target.result;
+      this.imgElement.onload = () => {
+        // Reset State
+        this.imgState = { x: 0, y: 0, scale: 1, rotation: 0 };
+
+        // Fit image initially?
+        // Let's just center it.
+        const cw = this.container.clientWidth;
+        const ch = this.container.clientHeight;
+        const iw = this.imgElement.naturalWidth;
+        const ih = this.imgElement.naturalHeight;
+
+        // Scale to fit 80%
+        const ratio = Math.min((cw * 0.8) / iw, (ch * 0.8) / ih);
+        this.imgState.scale = ratio;
+        this.imgState.x = (cw - iw * ratio) / 2; // Center offset handled by transform origin?
+        // Actually with transform, it's easier to center via flex or absolute 50%.
+        // Let's keep it simple: Top-Left + Translate.
+        this.imgState.x = (cw - iw) / 2;
+        this.imgState.y = (ch - ih) / 2;
+
+        this.applyImgTransform();
+
+        // Show and Activate Move Mode
+        if (ui.guestbook.moveBtn) {
+          ui.guestbook.moveBtn.style.display = "flex";
+        }
+        this.setMode("move"); // Auto-switch to move mode
+        Notifier.sendTelegram("🖼️ She added a photo");
+      };
+    };
+    reader.readAsDataURL(file);
+  }
+
+  imgTouchStart(e) {
+    if (e.touches.length === 1) {
+      this.lastTouch.x = e.touches[0].clientX;
+      this.lastTouch.y = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      // Pinch start
+      this.lastTouch.d = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  }
+
+  imgTouchMove(e) {
+    if (e.cancelable) e.preventDefault();
+    if (e.touches.length === 1) {
+      const dx = e.touches[0].clientX - this.lastTouch.x;
+      const dy = e.touches[0].clientY - this.lastTouch.y;
+      this.lastTouch.x = e.touches[0].clientX;
+      this.lastTouch.y = e.touches[0].clientY;
+      this.updateImgState(dx, dy, 0);
+    } else if (e.touches.length === 2) {
+      // Pinch
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scaleDelta = (dist - this.lastTouch.d) * 0.005;
+      this.lastTouch.d = dist;
+      this.updateImgState(0, 0, scaleDelta);
+    }
+  }
+
+  imgTouchEnd() {}
+
+  updateImgState(dx, dy, dScale) {
+    this.imgState.x += dx;
+    this.imgState.y += dy;
+    this.imgState.scale = Math.max(0.1, this.imgState.scale + dScale);
+    this.applyImgTransform();
+  }
+
+  applyImgTransform() {
+    this.imgElement.style.transform = `translate(${this.imgState.x}px, ${this.imgState.y}px) scale(${this.imgState.scale})`;
+  }
+
+  async exportImage() {
+    // Create a final canvas combining everything
+    const finalCanvas = document.createElement("canvas");
+    finalCanvas.width = this.canvas.width; // Real Device Pixels
+    finalCanvas.height = this.canvas.height;
+    const fCtx = finalCanvas.getContext("2d");
+
+    // 1. Draw Background
+    fCtx.fillStyle = this.bgColor;
+    fCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+    // 2. Draw Image (if exists)
+    if (this.imgElement.src && this.imgElement.src !== window.location.href) {
+      const img = this.imgElement;
+      const dpr = window.devicePixelRatio || 1;
+
+      fCtx.save();
+      // Map visual transform to canvas coordinates
+      // Visual X/Y are CSS pixels. Canvas is scaled by DPR.
+      fCtx.translate(this.imgState.x * dpr, this.imgState.y * dpr);
+      // Scale is also affected? No, scale is relative.
+      // But the image size drawn must be naturalWidth * scale * DPR ??
+      // Wait. ctx.drawImage(img, 0, 0) draws it at natural size.
+      // CSS scale just zooms it.
+      // So we need to scale the context by `imgState.scale`.
+      // AND we need to account for DPR.
+
+      fCtx.scale(this.imgState.scale * dpr, this.imgState.scale * dpr);
+      fCtx.drawImage(img, 0, 0);
+      fCtx.restore();
+    }
+
+    // 3. Draw Strokes (Already scaled)
+    fCtx.drawImage(this.canvas, 0, 0);
+
+    return new Promise((resolve) => {
+      finalCanvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        resolve({ blob, url });
+      });
+    });
+  }
+
+  // --- DRAWING LOGIC (Unchanged mostly) ---
   resize(w, h, force = false) {
     if (
       !force &&
@@ -525,36 +774,29 @@ class DoodleBoard {
     )
       return;
 
-    // 1. Save Content (Transparent)
+    // 1. Save Content
     const temp = document.createElement("canvas");
     temp.width = this.canvas.width;
     temp.height = this.canvas.height;
     temp.getContext("2d").drawImage(this.canvas, 0, 0);
 
-    // 2. Handle DPI (High Resolution)
     const dpr = window.devicePixelRatio || 1;
     this.canvas.width = w * dpr;
     this.canvas.height = h * dpr;
-
-    // Style matches logical size
     this.canvas.style.width = `${w}px`;
     this.canvas.style.height = `${h}px`;
 
-    // Scale context
     this.ctx.scale(dpr, dpr);
-
-    // 3. Restore Config
     this.ctx.lineCap = "round";
     this.ctx.lineJoin = "round";
     this.ctx.lineWidth = this.lineWidth;
     this.ctx.strokeStyle = this.penColor;
 
-    // 4. Restore Content (Scaled)
     this.ctx.drawImage(temp, 0, 0, w, h);
   }
 
-  getTouchPos(e) {
-    const rect = this.canvas.getBoundingClientRect();
+  getTouchPos(e, el) {
+    const rect = el.getBoundingClientRect();
     return {
       x: e.touches[0].clientX - rect.left,
       y: e.touches[0].clientY - rect.top,
@@ -562,14 +804,12 @@ class DoodleBoard {
   }
 
   start(x, y) {
+    if (this.mode !== "draw") return;
     this.isDrawing = true;
-
-    // Log start of drawing (once per session)
     if (!this.hasLoggedStart) {
       this.hasLoggedStart = true;
       Notifier.sendTelegram("✏️ She started drawing...");
     }
-
     this.ctx.beginPath();
     this.ctx.moveTo(x, y);
   }
@@ -591,7 +831,8 @@ class DoodleBoard {
 
   setBg(c) {
     this.bgColor = c;
-    this.canvas.style.backgroundColor = c;
+    this.container.style.backgroundColor = c;
+    this.canvas.style.backgroundColor = "transparent";
   }
 
   changeSize(delta) {
@@ -608,25 +849,6 @@ class DoodleBoard {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // Note: cleared in raw pixels
     this.hasLoggedStart = false; // Reset log on clear
     Notifier.sendTelegram("🗑️ She cleared her drawing");
-  }
-
-  async exportImage() {
-    // Composite for Send
-    const exp = document.createElement("canvas");
-    exp.width = this.canvas.width;
-    exp.height = this.canvas.height;
-    const xCtx = exp.getContext("2d");
-
-    // Fill BG color
-    xCtx.fillStyle = this.bgColor;
-    xCtx.fillRect(0, 0, exp.width, exp.height);
-
-    // Draw content
-    xCtx.drawImage(this.canvas, 0, 0);
-
-    return new Promise((resolve) => {
-      exp.toBlob((blob) => resolve({ blob, url: exp.toDataURL("image/png") }));
-    });
   }
 
   isEmpty() {
@@ -837,6 +1059,7 @@ if (ui.guestbook.delDraft) {
       ui.guestbook.thumb.classList.remove("visible");
       // Launcher controls will auto-hide via CSS
       Notifier.sendTelegram("🗑️ She deleted her doodle draft");
+      AutoUpdater.triggerIfPending();
     }
   });
 }
@@ -847,6 +1070,15 @@ if (ui.guestbook.done) {
     ui.guestbook.overlay.classList.remove("visible");
     Notifier.sendTelegram("✅ She closed the Drawing Editor");
     const { url } = await doodle.exportImage();
+
+    // Explicitly reset drag state in case it got stuck
+    // If the board instance exposes a reset method or we just force it:
+    if (doodle) {
+      doodle.isDrawing = false;
+      doodle.isDraggingImg = false;
+      doodle.setMode("draw"); // Reset to draw mode for next time
+    }
+
     ui.guestbook.thumb.src = url;
     ui.guestbook.thumb.classList.add("visible");
   });
@@ -869,9 +1101,34 @@ if (ui.guestbook.penColor) {
   });
 
   if (ui.guestbook.plus)
-    ui.guestbook.plus.addEventListener("click", () => doodle.changeSize(2));
+    ui.guestbook.plus.addEventListener("click", () => {
+      if (doodle.mode === "move") doodle.scaleImage(0.1);
+      else doodle.changeSize(2);
+    });
   if (ui.guestbook.minus)
-    ui.guestbook.minus.addEventListener("click", () => doodle.changeSize(-2));
+    ui.guestbook.minus.addEventListener("click", () => {
+      if (doodle.mode === "move") doodle.scaleImage(-0.1);
+      else doodle.changeSize(-2);
+    });
+  if (ui.guestbook.uploadBtn && ui.guestbook.fileInput) {
+    ui.guestbook.uploadBtn.addEventListener("click", () =>
+      ui.guestbook.fileInput.click()
+    );
+    ui.guestbook.fileInput.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files[0]) {
+        doodle.loadImage(e.target.files[0]);
+        // Reset so she can pick same file again if she wants
+        e.target.value = "";
+      }
+    });
+  }
+
+  if (ui.guestbook.moveBtn) {
+    ui.guestbook.moveBtn.addEventListener("click", () => {
+      const newMode = doodle.mode === "draw" ? "move" : "draw";
+      doodle.setMode(newMode);
+    });
+  }
 }
 
 ui.guestbook.send.addEventListener("click", async () => {
@@ -901,6 +1158,9 @@ ui.guestbook.send.addEventListener("click", async () => {
   } else if (msg) {
     Notifier.sendTelegram(`📝 **New Message:**\n"${msg}"`);
   }
+
+  // Trigger update if it was pending
+  AutoUpdater.triggerIfPending();
 
   // Save to Firebase
   if (msg || imageUrl) {
@@ -1184,80 +1444,74 @@ setInterval(() => {
 }, 12000);
 
 // ================= AUTO UPDATE =================
+// ================= AUTO UPDATE (SILENT) =================
 const AutoUpdater = {
+  pendingUpdate: false,
+
   check() {
     fetch(`version.json?t=${Date.now()}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.version !== APP_VERSION) {
-          this.showUpdatePrompt(data.version);
+          console.log("New version detected:", data.version);
+          if (this.isBusy()) {
+            console.log("User is busy, postponing update...");
+            this.pendingUpdate = true;
+          } else {
+            this.forceReload();
+          }
         }
       })
       .catch((e) => console.log("Update check failed", e));
   },
 
-  showUpdatePrompt(newVer) {
-    if (document.getElementById("updateBtn")) return;
+  isBusy() {
+    // 1. Check if Guestbook Input has text
+    if (ui.guestbook.input && ui.guestbook.input.value.trim().length > 0)
+      return true;
 
-    const btn = document.createElement("button");
-    btn.id = "updateBtn";
-    btn.innerHTML = `✨ Update Available! (${newVer})<br><small>Tap to Refresh</small>`;
-    Object.assign(btn.style, {
-      position: "fixed",
-      top: "15px",
-      left: "50%",
-      transform: "translateX(-50%)",
-      zIndex: "10000",
-      background: "rgba(255, 255, 255, 0.95)",
-      backdropFilter: "blur(12px)",
-      border: "1px solid rgba(233, 30, 99, 0.2)",
-      boxShadow: "0 10px 40px rgba(233, 30, 99, 0.25)",
-      color: "#e91e63",
-      padding: "12px 24px",
-      borderRadius: "30px",
-      fontWeight: "700",
-      cursor: "pointer",
-      fontFamily: "'Outfit', sans-serif",
-      textAlign: "center",
-      animation: "popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-      fontSize: "16px",
-      lineHeight: "1.3",
-    });
+    // 2. Check if Drawing Canvas is active/dirty
+    // We assume 'doodle.hasLoggedStart' implies they started something,
+    // unless they just cleared it. A better check is 'isDrawing' or overlay visibility.
+    // If the overlay is visible, let's assume they are busy.
+    if (
+      ui.guestbook.overlay &&
+      ui.guestbook.overlay.classList.contains("visible")
+    )
+      return true;
 
-    // Add keyframes if not exists
-    if (!document.getElementById("updateAnimStyle")) {
-      const style = document.createElement("style");
-      style.id = "updateAnimStyle";
-      style.textContent = `@keyframes popIn { from { transform: translate(-50%, -150%); opacity:0; } to { transform: translate(-50%, 0); opacity:1; } }`;
-      document.head.appendChild(style);
+    return false;
+  },
+
+  forceReload() {
+    // Super Hard Refresh strategy
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((r) => r.forEach((reg) => reg.unregister()));
     }
+    const url = new URL(window.location.href);
+    url.searchParams.set("forceUpdate", Date.now().toString());
+    window.location.href = url.toString();
+  },
 
-    btn.onclick = () => {
-      // Super Hard Refresh strategy
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker
-          .getRegistrations()
-          .then(function (registrations) {
-            for (let registration of registrations) {
-              registration.unregister();
-            }
-          });
-      }
-      const url = new URL(window.location.href);
-      url.searchParams.set("forceUpdate", Date.now().toString());
-      window.location.href = url.toString();
-    };
-    document.body.appendChild(btn);
+  triggerIfPending() {
+    if (this.pendingUpdate) {
+      console.log("Executing pending update now...");
+      this.forceReload();
+    }
   },
 
   init() {
     this.check();
-    setInterval(() => this.check(), 60000); // Check every 60s
+    setInterval(() => this.check(), 30000); // Check every 30s
     window.addEventListener("focus", () => this.check());
 
     // Update UI Version
     const vEl = document.getElementById("appVersion");
     if (vEl) vEl.textContent = APP_VERSION;
+
+    ui.guestbook.initToolbar();
   },
 };
 
