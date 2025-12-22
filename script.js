@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ================= CONSTANTS & CONFIG ==================
-const APP_VERSION = "v2.1";
+const APP_VERSION = "v2.2";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
@@ -1267,6 +1267,10 @@ const AutoUpdater = {
     this.check();
     setInterval(() => this.check(), 60000); // Check every 60s
     window.addEventListener("focus", () => this.check());
+
+    // Update UI Version
+    const vEl = document.getElementById("appVersion");
+    if (vEl) vEl.textContent = APP_VERSION;
   },
 };
 
