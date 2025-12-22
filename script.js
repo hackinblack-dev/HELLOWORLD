@@ -1246,8 +1246,19 @@ const AutoUpdater = {
     }
 
     btn.onclick = () => {
-      // Force reload ignoring cache
-      window.location.reload(true);
+      // Super Hard Refresh strategy
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .getRegistrations()
+          .then(function (registrations) {
+            for (let registration of registrations) {
+              registration.unregister();
+            }
+          });
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.set("forceUpdate", Date.now().toString());
+      window.location.href = url.toString();
     };
     document.body.appendChild(btn);
   },
