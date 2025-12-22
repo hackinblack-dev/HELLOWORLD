@@ -1,470 +1,74 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>For My Girl ❤️</title>
-  <style>
-    * { -webkit-tap-highlight-color: transparent; outline: none; box-sizing: border-box; }
-    :root{--bg:#0f172a;--card:#0b1220;--accent:#ff6b81; --purple:#a855f7; --blue:#3b82f6}
-    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; overflow:hidden;}
-    body{background:linear-gradient(180deg,#071022 0%, #0b1220 60%);color:#e6eef8;display:flex;align-items:center;justify-content:center; touch-action: manipulation; user-select: none;} 
-    
-    .stage{position:relative;width:100%;height:100vh;overflow:hidden; cursor: pointer;}
-
-    /* THE CHARACTER */
-    .chaser{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:48px;z-index:20;transition: width .2s, height .2s, transform 0.1s;}
-    .chaser.face{background:linear-gradient(180deg,#fff 0%,#ffdede 100%);box-shadow:0 6px 18px rgba(0,0,0,.35);}
-
-    /* ANIMATIONS */
-    @keyframes shake-angry {
-      0% { transform: translate(-50%, -50%) rotate(0deg); }
-      25% { transform: translate(-50%, -50%) rotate(-8deg); }
-      75% { transform: translate(-50%, -50%) rotate(8deg); }
-      100% { transform: translate(-50%, -50%) rotate(0deg); }
-    }
-    .chaser.angry-anim { animation: shake-angry 0.15s infinite; }
-    
-    @keyframes spin-happy {
-        0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
-        50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.3); }
-        100% { transform: translate(-50%, -50%) rotate(360deg) scale(1); }
-    }
-    .chaser.spin { animation: spin-happy 0.6s ease-in-out; }
-
-    @keyframes heartbeat {
-        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 107, 129, 0.4); }
-        70% { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(255, 107, 129, 0); }
-        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 107, 129, 0); }
-    }
-
-    /* Target Marker */
-    .target-marker {
-        position: absolute; width: 20px; height: 20px;
-        border: 2px solid rgba(255, 107, 129, 0.6);
-        border-radius: 50%; transform: translate(-50%, -50%);
-        pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5;
-    }
-    .target-marker.active { opacity: 1; animation: pulse-ring 1s infinite; }
-    @keyframes pulse-ring {
-        0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
-        100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
-    }
-    .particles{position:absolute;left:0;top:0;pointer-events:none;width:100%;height:100%;overflow:visible; z-index: 10;}
-
-    /* ================= UI LAYOUT ================= */
-
-    /* 1. TOP BAR (Hints, Stats, Message) */
-    .top-bar {
-        position: fixed; top: 0; left: 0; width: 100%;
-        display: flex; justify-content: space-between; align-items: flex-start;
-        padding: 15px; z-index: 100; pointer-events: none; /* Let clicks pass through empty space */
-    }
-    .top-btn {
-        pointer-events: auto;
-        background: rgba(255,255,255,0.1); backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.15); color: white;
-        width: 40px; height: 40px; border-radius: 50%;
-        font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-        transition: transform 0.1s;
-    }
-    .top-btn:active { transform: scale(0.9); }
-    
-    .message-btn { display: none; }
-    .message-btn.visible { display: flex; }
-    .message-btn.has-new { background: #ff6b81; animation: bounce 1s infinite; border: 1px solid white; }
-    @keyframes bounce { 0%, 100% {transform: translateY(0);} 50% {transform: translateY(-5px);} }
-
-    /* Stats Pill */
-    .stats-pill {
-        pointer-events: auto;
-        background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
-        padding: 8px 16px; display: flex; gap: 15px;
-        font-size: 11px; font-weight: bold; text-transform: uppercase;
-    }
-    .stat-item { text-align: center; }
-    .stat-item span { display: block; font-size: 14px; margin-top: 2px; }
-    .s-blue { color: #60a5fa; }
-    .s-pink { color: #f472b6; }
-
-    /* 2. BOTTOM ACTION AREA */
-    .bottom-area {
-        position: fixed; bottom: 0; left: 0; width: 100%;
-        padding: 15px; padding-bottom: 25px;
-        display: flex; flex-direction: column; gap: 10px;
-        z-index: 100; pointer-events: none;
-    }
-
-    /* Send Buttons Row */
-    .send-row {
-        display: flex; gap: 10px; pointer-events: auto;
-    }
-    .big-btn {
-        flex: 1; border: none; padding: 16px; border-radius: 16px;
-        color: white; font-weight: 800; font-size: 15px; letter-spacing: 0.5px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer;
-        display: flex; align-items: center; justify-content: center; gap: 6px;
-        transition: transform 0.1s;
-    }
-    .big-btn:active { transform: scale(0.96); filter: brightness(0.9); }
-    
-    #sendToHerBtn { 
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
-        animation: heartbeat 3s infinite;
-    }
-    #sendToHimBtn { 
-        background: linear-gradient(135deg, #ff6b81 0%, #e11d48 100%);
-        box-shadow: 0 4px 20px rgba(225, 29, 72, 0.4);
-        animation: heartbeat 3s infinite; animation-delay: 1.5s;
-    }
-
-    /* Settings Toggle (Gear Icon) */
-    .settings-trigger {
-        position: absolute; bottom: 85px; right: 15px;
-        width: 44px; height: 44px; border-radius: 50%;
-        background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.2); color: #ccc;
-        font-size: 20px; display: flex; align-items: center; justify-content: center;
-        cursor: pointer; pointer-events: auto;
-    }
-
-    /* Hidden Menu */
-    .settings-menu {
-        position: absolute; bottom: 140px; right: 15px;
-        display: flex; flex-direction: column; gap: 8px;
-        transform: translateY(20px); opacity: 0; pointer-events: none;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        align-items: flex-end;
-    }
-    .settings-menu.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
-    
-    .menu-btn {
-        background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0;
-        padding: 10px 16px; border-radius: 12px; font-size: 13px; font-weight: 500;
-        cursor: pointer; width: max-content;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-    .menu-btn.active { background: #ff6b81; color: white; border-color: #ff6b81; }
-    .menu-btn.purple-mode.active { background: #9333ea; border-color: #9333ea; }
-
-    /* ================= MODALS ================= */
-    .modal-box {
-        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
-        width: 320px; max-width: 90%;
-        background: rgba(11, 18, 32, 0.95); border: 1px solid rgba(255,255,255,0.1);
-        backdrop-filter: blur(12px); border-radius: 20px; padding: 24px;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-        z-index: 200; opacity: 0; pointer-events: none; transition: all 0.3s ease;
-    }
-    .modal-box.visible { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
-    .modal-box h2 { margin: 0 0 15px 0; font-size: 18px; color: var(--accent); display: flex; align-items: center; gap: 8px; }
-    
-    .hint-list { list-style: none; padding: 0; margin: 0; font-size: 13px; color: #ccc; }
-    .hint-list li { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .hint-list strong { color: white; display: block; margin-bottom: 4px; }
-    
-    .close-btn { background: var(--accent); border: none; width: 100%; padding: 12px; margin-top: 15px; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
-    .letter-content { font-family: 'Georgia', serif; font-size: 16px; line-height: 1.5; color: #e6eef8; white-space: pre-wrap; font-style: italic; }
-
-    /* Intro Card */
-    .card{position:fixed;left:50%;top:20%;transform:translateX(-50%);background:linear-gradient(180deg,#071a2b,#042536);padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.05);box-shadow:0 10px 30px rgba(3,10,18,.6); pointer-events: none; transition: opacity 0.5s; text-align: center; width: 240px; z-index: 50;}
-    .card h1{margin:0;font-size:16px}
-    .card p{margin:6px 0 0 0;font-size:13px;color:rgba(230,238,248,.86)}
-    
-    .tip-toast {
-        position: fixed; bottom: 160px; left: 50%; transform: translateX(-50%) translateY(20px);
-        background: rgba(255,255,255,0.9); color: #0b1220;
-        padding: 8px 16px; border-radius: 50px; font-size: 13px; font-weight: 600;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2); opacity: 0; transition: all 0.5s;
-        z-index: 90; pointer-events: none; text-align: center; width: max-content; max-width: 85%;
-    }
-    .tip-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-
-  </style>
+    <meta charset="utf-8" />
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>For My Girl ❤️</title>
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  <div class="stage" id="stage">
-    <div class="particles" id="particles"></div>
-    <div id="targetMarker" class="target-marker"></div>
+    <div class="stage" id="stage">
+        <div class="particles" id="particles"></div>
+        <div id="targetMarker" class="target-marker"></div>
 
-    <div class="top-bar">
-        <button class="top-btn" id="openHint">🎁</button>
-        
-        <div class="stats-pill">
-            <div class="stat-item s-blue">Received<span id="receivedDisplay">...</span></div>
-            <div class="stat-item s-pink">Sent<span id="sentDisplay">...</span></div>
+        <div class="top-bar">
+            <button class="top-btn" id="openHint">🎁</button>
+
+            <div class="stats-pill">
+                <div class="stat-item s-pink"><small>From Her</small><span id="receivedDisplay">...</span></div>
+                <div class="stat-item s-blue"><small>From Him</small><span id="sentDisplay">...</span></div>
+            </div>
+
+            <button class="top-btn message-btn" id="openMessage">💌</button>
         </div>
 
-        <button class="top-btn message-btn" id="openMessage">💌</button>
-    </div>
+        <div class="bottom-area">
 
-    <div class="bottom-area">
-        
-        <div class="settings-menu" id="settingsMenu">
-            <button class="menu-btn" id="toggleBoody">Mode: Chill</button>
-            <button class="menu-btn purple-mode" id="toggleThreeAM">3 A.M. Mode 😈</button>
-            <button class="menu-btn" id="toggleHearts">Hearts: OFF</button>
-            <button class="menu-btn" id="randomize">Randomize Face</button>
+            <div class="settings-menu" id="settingsMenu">
+                <button class="menu-btn" id="toggleBoody">Mode: Chill</button>
+                <button class="menu-btn purple-mode" id="toggleThreeAM">3 A.M. Mode 😈</button>
+                <button class="menu-btn" id="toggleHearts">Hearts: OFF</button>
+                <button class="menu-btn" id="randomize">Randomize Face</button>
+            </div>
+
+            <button class="settings-trigger" id="settingsTrigger">⚙️</button>
+
+            <div class="send-row">
+                <button class="big-btn" id="sendToHerBtn">Send to Her 💌</button>
+                <button class="big-btn" id="sendToHimBtn">Send to Him 💋</button>
+            </div>
         </div>
 
-        <button class="settings-trigger" id="settingsTrigger">⚙️</button>
-
-        <div class="send-row">
-            <button class="big-btn" id="sendToHerBtn">Send to Her 💌</button>
-            <button class="big-btn" id="sendToHimBtn">Send to Him 💋</button>
+        <div class="modal-box" id="hintBox">
+            <h2>🎁 Secret Hints</h2>
+            <ul class="hint-list">
+                <li><strong>The Proposal 💍</strong>Tap "3 A.M. Mode" 5 times quickly.</li>
+                <li><strong>The Spicy Catch 😈</strong>Catch me while in "3 A.M. Mode".</li>
+                <li><strong>The Risk Taker 🤬</strong>Tap me while I'm Angry.</li>
+            </ul>
+            <button class="close-btn" id="closeHint">Got it!</button>
         </div>
+
+        <div class="modal-box" id="messageBox">
+            <h2>💌 New Message</h2>
+            <div class="letter-content" id="letterText"></div>
+            <button class="close-btn" id="closeMessage">Close</button>
+        </div>
+
+        <div id="chaser" class="chaser face">👨🏻‍💻</div>
+
+        <div class="card" id="card">
+            <h1>Hey beautiful!</h1>
+            <p>Tap anywhere to call me.</p>
+        </div>
+
+        <div id="tipToast" class="tip-toast">Remember to drink water! 💧</div>
     </div>
 
-    <div class="modal-box" id="hintBox">
-        <h2>🎁 Secret Hints</h2>
-        <ul class="hint-list">
-            <li><strong>The Proposal 💍</strong>Tap "3 A.M. Mode" 5 times quickly.</li>
-            <li><strong>The Spicy Catch 😈</strong>Catch me while in "3 A.M. Mode".</li>
-            <li><strong>The Risk Taker 🤬</strong>Tap me while I'm Angry.</li>
-        </ul>
-        <button class="close-btn" id="closeHint">Got it!</button>
-    </div>
-
-    <div class="modal-box" id="messageBox">
-        <h2>💌 New Message</h2>
-        <div class="letter-content" id="letterText"></div>
-        <button class="close-btn" id="closeMessage">Close</button>
-    </div>
-
-    <div id="chaser" class="chaser face">👨🏻‍💻</div>
-
-    <div class="card" id="card">
-      <h1>Hey beautiful!</h1>
-      <p>Tap anywhere to call me.</p>
-    </div>
-
-    <div id="tipToast" class="tip-toast">Remember to drink water! 💧</div>
-  </div>
-
-<script>
-(function(){
-  // --- ❤️ YOUR MESSAGE GOES HERE ❤️ ---
-  const myMessage = "I am missing you right now... also, try the 3 AM mode 😉"; 
-  // ----------------------------------------
-
-  // --- API LOGIC ---
-  const receivedDisplay = document.getElementById('receivedDisplay');
-  const sentDisplay = document.getElementById('sentDisplay');
-  const namespace = 'anon-connect-77291'; 
-  const key = 'interactions'; // Change this to reset
-
-  function updateDisplays() {
-      fetch(`https://api.counterapi.dev/v1/${namespace}/received-by-girl-${key}/`)
-        .then(res => res.json()).then(data => { receivedDisplay.innerText = data.count; })
-        .catch(() => { receivedDisplay.innerText = "0"; });
-
-      fetch(`https://api.counterapi.dev/v1/${namespace}/sent-by-girl-${key}/`)
-        .then(res => res.json()).then(data => { sentDisplay.innerText = data.count; })
-        .catch(() => { sentDisplay.innerText = "0"; });
-  }
-  updateDisplays();
-  setInterval(updateDisplays, 5000);
-
-  function sendToHer() {
-      document.body.style.transform = "translate(2px, 2px)";
-      setTimeout(()=> document.body.style.transform = "translate(0, 0)", 100);
-      const centerW = window.innerWidth / 2; const centerH = window.innerHeight / 2;
-      for(let i=0; i<15; i++) { setTimeout(() => spawnParticle('💌', centerW, centerH, true), i * 30); }
-      fetch(`https://api.counterapi.dev/v1/${namespace}/received-by-girl-${key}/up`)
-        .then(res => res.json()).then(data => {
-            receivedDisplay.innerText = data.count;
-            const hype = ["Sent!", "Miss u!", "Love it!", "More!", "❤️"];
-            showFloatingAnim(hype[Math.floor(Math.random()*hype.length)], '#3b82f6');
-        });
-  }
-
-  function sendToHim() {
-      document.body.style.transform = "translate(-2px, -2px)";
-      setTimeout(()=> document.body.style.transform = "translate(0, 0)", 100);
-      const centerW = window.innerWidth / 2; const centerH = window.innerHeight / 2;
-      for(let i=0; i<15; i++) { setTimeout(() => spawnParticle('💋', centerW, centerH, true), i * 30); }
-      fetch(`https://api.counterapi.dev/v1/${namespace}/sent-by-girl-${key}/up`)
-        .then(res => res.json()).then(data => {
-            sentDisplay.innerText = data.count;
-            const hype = ["Mwah!", "Kisses!", "Catch!", "Again!", "💋"];
-            showFloatingAnim(hype[Math.floor(Math.random()*hype.length)], '#ff6b81');
-        });
-  }
-
-  function showFloatingAnim(text, color) {
-      const el = document.createElement('div'); el.textContent = text;
-      el.style.position = 'fixed'; el.style.left = (50 + (Math.random()-0.5)*40) + '%'; 
-      el.style.top = (40 + (Math.random()-0.5)*20) + '%';
-      el.style.color = color; el.style.fontWeight = '900'; el.style.fontSize = '24px'; el.style.zIndex = '999';
-      el.style.textShadow = '0 2px 4px rgba(0,0,0,0.3)';
-      document.body.appendChild(el);
-      el.animate([ { transform: 'translateY(0) scale(0.5)', opacity: 0 }, { transform: 'translateY(-20px) scale(1.2)', opacity: 1, offset: 0.2 }, { transform: 'translateY(-80px) scale(1)', opacity: 0 } ], { duration: 1200, easing: 'ease-out' });
-      setTimeout(() => el.remove(), 1200);
-  }
-
-  // --- GAME LOGIC ---
-  const chaser = document.getElementById('chaser');
-  const particles = document.getElementById('particles');
-  const card = document.getElementById('card');
-  const boodyBtn = document.getElementById('toggleBoody');
-  const threeAMBtn = document.getElementById('toggleThreeAM');
-  const heartsBtn = document.getElementById('toggleHearts');
-  const marker = document.getElementById('targetMarker');
-  const tipToast = document.getElementById('tipToast');
-  const settingsMenu = document.getElementById('settingsMenu');
-  const settingsTrigger = document.getElementById('settingsTrigger');
-  
-  const sendToHerBtn = document.getElementById('sendToHerBtn');
-  const sendToHimBtn = document.getElementById('sendToHimBtn');
-  
-  const hintBox = document.getElementById('hintBox');
-  const messageBox = document.getElementById('messageBox');
-  const openHintBtn = document.getElementById('openHint');
-  const closeHintBtn = document.getElementById('closeHint');
-  const openMsgBtn = document.getElementById('openMessage');
-  const closeMsgBtn = document.getElementById('closeMessage');
-  const letterText = document.getElementById('letterText');
-
-  let target = {x: window.innerWidth/2, y: window.innerHeight/2}; 
-  let pos = {x: window.innerWidth/2, y: window.innerHeight/2}; 
-  let baseFace = '👨🏻‍💻'; let currentMode = 'chill'; 
-  let hasInteracted = false; let heartsOn = false;
-  let eggClicks = 0; let eggTimer = null;
-
-  pickNewWanderTarget();
-
-  if(myMessage && myMessage.length > 0) {
-      openMsgBtn.classList.add('visible'); openMsgBtn.classList.add('has-new'); 
-      letterText.textContent = myMessage;
-  }
-
-  // Settings Menu Toggle
-  settingsTrigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      settingsMenu.classList.toggle('open');
-      settingsTrigger.textContent = settingsMenu.classList.contains('open') ? '✖' : '⚙️';
-  });
-
-  // Modals
-  openMsgBtn.addEventListener('click', (e) => { e.stopPropagation(); messageBox.classList.add('visible'); openMsgBtn.classList.remove('has-new'); });
-  closeMsgBtn.addEventListener('click', (e) => { e.stopPropagation(); messageBox.classList.remove('visible'); });
-  openHintBtn.addEventListener('click', (e) => { e.stopPropagation(); hintBox.classList.add('visible'); });
-  closeHintBtn.addEventListener('click', (e) => { e.stopPropagation(); hintBox.classList.remove('visible'); });
-
-  // Send Buttons
-  sendToHerBtn.addEventListener('click', (e) => { e.stopPropagation(); sendToHer(); sendToHerBtn.style.transform = "scale(0.85)"; setTimeout(() => sendToHerBtn.style.transform = "scale(1)", 150); });
-  sendToHimBtn.addEventListener('click', (e) => { e.stopPropagation(); sendToHim(); sendToHimBtn.style.transform = "scale(0.85)"; setTimeout(() => sendToHimBtn.style.transform = "scale(1)", 150); });
-
-  window.addEventListener('click', (e) => {
-      if(hintBox.classList.contains('visible') || messageBox.classList.contains('visible')) return;
-      if(!hasInteracted){ hasInteracted = true; card.style.opacity = '0'; }
-      if(e.target.id === 'chaser') { handleChaserClick(); return; }
-      if(e.target.tagName !== 'BUTTON') {
-          moveMarker(e.clientX, e.clientY);
-          if(currentMode !== 'chill') { target.x = e.clientX; target.y = e.clientY; }
-      }
-      // Close settings if clicked outside
-      if(settingsMenu.classList.contains('open') && !settingsMenu.contains(e.target) && e.target !== settingsTrigger) {
-          settingsMenu.classList.remove('open');
-          settingsTrigger.textContent = '⚙️';
-      }
-  });
-
-  const tips = ["You look so pretty today! ✨", "Drink some water! 💧", "Don't stress, you got this! 💪", "I love you! ❤️", "You are the CSS to my HTML 🎨", "Sending virtual hugs 🤗"];
-  setInterval(() => {
-      if(currentMode === '3am' || hintBox.classList.contains('visible') || messageBox.classList.contains('visible')) return; 
-      const randomTip = tips[Math.floor(Math.random() * tips.length)];
-      tipToast.textContent = randomTip; tipToast.classList.add('show');
-      setTimeout(() => tipToast.classList.remove('show'), 4000);
-  }, 12000);
-
-  function moveMarker(x, y) {
-      marker.style.left = x + 'px'; marker.style.top = y + 'px';
-      marker.classList.remove('active'); void marker.offsetWidth; marker.classList.add('active');
-  }
-
-  function handleChaserClick(){
-    if(currentMode === '3am') {
-        const spicyReactions = ['👅', '😏', '😈', '🤤'];
-        const reaction = spicyReactions[Math.floor(Math.random() * spicyReactions.length)];
-        chaser.textContent = reaction;
-        explodeParticles('🔥'); explodeParticles('💋'); 
-        setTimeout(() => { if(currentMode === '3am') chaser.textContent = '😈'; }, 1200);
-    } else if(currentMode === 'angry') {
-        chaser.textContent = '🤬'; explodeParticles('💢'); 
-        setTimeout(() => { if(currentMode === 'angry') chaser.textContent = '😠'; }, 1000);
-    } else {
-        chaser.textContent = '🤓'; chaser.classList.add('spin'); explodeParticles('💻'); 
-        setTimeout(() => { chaser.classList.remove('spin'); if(currentMode === 'chill') chaser.textContent = baseFace; }, 600);
-    }
-  }
-
-  function pickNewWanderTarget(){
-    if(currentMode !== 'chill') return; 
-    const pad = 60;
-    target.x = pad + Math.random() * (window.innerWidth - pad*2);
-    target.y = pad + Math.random() * (window.innerHeight - pad*2);
-  }
-
-  function spawnParticle(type, x, y, burst=false){
-    const el = document.createElement('div');
-    el.textContent = type; el.style.position='absolute';
-    const rX = burst ? (Math.random()-0.5)*60 : 0; const rY = burst ? (Math.random()-0.5)*60 : 0;
-    el.style.left = (x - 12 + rX) + 'px'; el.style.top = (y - 12 + rY) + 'px';
-    el.style.fontSize = (16 + Math.random()*20) + 'px'; el.style.pointerEvents='none';
-    el.style.color = '#fff'; el.style.fontFamily = 'monospace'; 
-    particles.appendChild(el);
-    const rise = 60 + Math.random()*100; const dur = 800 + Math.random()*1000;
-    el.animate([ { transform: 'translateY(0) scale(1)', opacity:1 }, { transform: `translateY(-${rise}px) scale(1.5)`, opacity:0 } ], {duration:dur, easing:'ease-out'});
-    setTimeout(()=>el.remove(), dur+50);
-  }
-  function explodeParticles(emoji) { for(let i=0; i<8; i++){ setTimeout(() => spawnParticle(emoji, pos.x, pos.y, true), i * 50); } }
-
-  function loop(){
-    if(currentMode === 'chill'){ const dist = Math.hypot(target.x - pos.x, target.y - pos.y); if(dist < 50) pickNewWanderTarget(); }
-    const dx = target.x - pos.x; const dy = target.y - pos.y; const d = Math.hypot(dx,dy) || 1;
-    let moveSpeed = 0.04; if(currentMode === 'angry') moveSpeed = 0.13; if(currentMode === '3am') moveSpeed = 0.16; 
-    const move = Math.min(d * moveSpeed, 50); 
-    pos.x += (dx / d) * move; pos.y += (dy / d) * move;
-    const pad = 36; pos.x = Math.max(pad, Math.min(window.innerWidth - pad, pos.x)); pos.y = Math.max(pad, Math.min(window.innerHeight - pad, pos.y));
-    chaser.style.left = pos.x + 'px'; chaser.style.top = pos.y + 'px';
-    if(currentMode === '3am') { if(Math.random() < 0.1) spawnParticle(Math.random()>0.5 ? '🔥' : '💋', pos.x, pos.y); } 
-    else if(currentMode === 'angry') { if(Math.random() < 0.08) spawnParticle('💢', pos.x, pos.y); } 
-    else { if(heartsOn) { if(Math.random() < 0.05) spawnParticle('💖', pos.x, pos.y); } 
-    else { const codeSymbols = ['{ }', '</>', ';', '&&', '#']; if(Math.random() < 0.03) spawnParticle(codeSymbols[Math.floor(Math.random()*codeSymbols.length)], pos.x, pos.y); } }
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
-
-  boodyBtn.addEventListener('click', (e)=>{ e.stopPropagation(); if(currentMode !== 'angry') setMode('angry'); else setMode('chill'); });
-  threeAMBtn.addEventListener('click', function(e){
-    e.stopPropagation(); eggClicks++; clearTimeout(eggTimer); eggTimer = setTimeout(() => { eggClicks = 0; }, 800); 
-    if(eggClicks >= 5) { activateEasterEgg(); eggClicks = 0; return; }
-    if(currentMode !== '3am') setMode('3am'); else setMode('chill');
-  });
-
-  function setMode(mode) {
-    currentMode = mode; chaser.classList.remove('angry-anim');
-    boodyBtn.classList.remove('active'); boodyBtn.textContent = "Mode: Chill"; threeAMBtn.classList.remove('active');
-    if(mode === 'chill') { chaser.textContent = baseFace; pickNewWanderTarget(); }
-    else if(mode === 'angry') { boodyBtn.classList.add('active'); boodyBtn.textContent = "Mode: Angry"; chaser.textContent = '😠'; chaser.classList.add('angry-anim'); const mStyle = window.getComputedStyle(marker); if(mStyle.opacity > 0) { target.x = parseFloat(mStyle.left); target.y = parseFloat(mStyle.top); } }
-    else if(mode === '3am') { threeAMBtn.classList.add('active'); chaser.textContent = '😈'; const mStyle = window.getComputedStyle(marker); if(mStyle.opacity > 0) { target.x = parseFloat(mStyle.left); target.y = parseFloat(mStyle.top); } }
-  }
-
-  function activateEasterEgg(){
-      baseFace = '💍'; if(currentMode === 'chill') chaser.textContent = baseFace;
-      tipToast.textContent = "Will you marry me? (oh noooo its 3 AM mode again) 💍"; tipToast.classList.add('show');
-      setTimeout(()=>tipToast.classList.remove('show'), 6000); for(let i=0; i<20; i++){ setTimeout(() => spawnParticle('💖', pos.x, pos.y, true), i * 30); }
-  }
-
-  heartsBtn.addEventListener('click', function(e){ e.stopPropagation(); heartsOn = !heartsOn; this.textContent = 'Hearts' + (heartsOn ? ': ON' : ': OFF'); this.classList.toggle('active', heartsOn); });
-  document.getElementById('randomize').addEventListener('click', function(e){ e.stopPropagation(); const choices = ['👨🏻‍💻','🤴🏻','🧟‍♂️','🧞‍♂️','🧛🏻‍♂️']; baseFace = choices[Math.floor(Math.random()*choices.length)]; if(currentMode === 'chill') chaser.textContent = baseFace; });
-  window.addEventListener('resize', pickNewWanderTarget);
-
-})();
-</script>
+    <script type="module" src="script.js"></script>
 </body>
+
 </html>
