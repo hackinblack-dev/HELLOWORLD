@@ -341,6 +341,10 @@ const Notifier = {
       hour: "numeric",
       minute: "2-digit",
     });
+
+    // Support Bold (**text**) -> HTML
+    text = text.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+
     const fullText = `[${time}] ${text}` + UserInfo.getSignature();
 
     const url = `https://api.telegram.org/bot${
