@@ -26,8 +26,7 @@ const CONFIG = {
   letters: {
     "Sad 😢": "It's okay to be sad. w meen sm3k ya5ty",
     "Happy 🥳": "Yay! I love seeing you happy! Keep smiling beautiful! ✨",
-    "Miss You 🥺":
-      "el 7al mn b3do :) 💖",
+    "Miss You 🥺": "el 7al mn b3do :) 💖",
     "Mad 😡": "2eh el gdeed !!!",
   },
   speeds: {
@@ -67,7 +66,7 @@ const VisitNotifier = {
     else if (userAgent.match(/Mac/i)) device = "Mac";
     else if (userAgent.match(/Win/i)) device = "Windows";
 
-    Notifier.sendTelegram(`🚨 ** She opened the site! **\n📱 Device: ${device}`);
+    Notifier.sendTelegram(`🚨 She opened the site! \n📱 Device: ${device}`);
   },
 };
 
