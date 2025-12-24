@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ================= CONSTANTS & CONFIG ==================
-const APP_VERSION = "v2.12";
+const APP_VERSION = "v2.13";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
@@ -860,6 +860,17 @@ const doodle = new DoodleBoard("doodleCanvas");
 // --- SETUP ---
 
 // 1. Initial Data Load & Listeners
+onValue(refs.her, (snap) => {
+  const val = snap.val() || 0;
+  ui.received.innerText = val;
+  Notifier.checkIncoming("her", val);
+});
+onValue(refs.him, (snap) => {
+  const val = snap.val() || 0;
+  ui.sent.innerText = val;
+  Notifier.checkIncoming("him", val);
+});
+
 onValue(refs.inbox, (snap) => {
   const data = snap.val();
   if (data) {
