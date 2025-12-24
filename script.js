@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ================= CONSTANTS & CONFIG ==================
-const APP_VERSION = "v2.11";
+const APP_VERSION = "v2.12";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
@@ -860,24 +860,65 @@ const doodle = new DoodleBoard("doodleCanvas");
 // --- SETUP ---
 
 // 1. Initial Data Load & Listeners
-onValue(refs.her, (snap) => {
-  const val = snap.val() || 0;
-  ui.received.innerText = val;
-  Notifier.checkIncoming("her", val);
-});
-onValue(refs.him, (snap) => {
-  const val = snap.val() || 0;
-  ui.sent.innerText = val;
-  Notifier.checkIncoming("him", val);
-});
 onValue(refs.inbox, (snap) => {
-  const msg = snap.val();
-  if (msg) {
-    ui.letter.textContent = msg;
+  const data = snap.val();
+  if (data) {
+    // 1. Normalize content
+    const msgText = typeof data === "object" ? data.text || "" : data;
+    const imgSrc = typeof data === "object" ? data.image || null : null;
 
-    // Check if truly new (not just a reload)
+    // 2. Render Content
+    ui.letter.innerHTML = ""; // Clear previous
+
+    if (imgSrc) {
+      const imgContainer = document.createElement("div");
+      imgContainer.style.textAlign = "center";
+      imgContainer.style.marginBottom = "15px";
+
+      const img = document.createElement("img");
+      img.src = imgSrc;
+      img.style.maxWidth = "100%";
+      img.style.borderRadius = "12px";
+      img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.3)";
+
+      const dlLink = document.createElement("a");
+      dlLink.href = imgSrc;
+      dlLink.download = `love_doodle_${Date.now()}.png`;
+      dlLink.innerHTML = "⬇️ save";
+      dlLink.style.display = "inline-block";
+      dlLink.style.marginTop = "10px";
+      dlLink.style.color = "#60a5fa"; // Blue-ish
+      dlLink.style.textDecoration = "none";
+      dlLink.style.fontSize = "14px";
+      dlLink.style.fontWeight = "600";
+      dlLink.style.padding = "8px 16px";
+      dlLink.style.background = "rgba(255,255,255,0.05)";
+      dlLink.style.borderRadius = "20px";
+      dlLink.style.border = "1px solid rgba(255,255,255,0.1)";
+
+      dlLink.addEventListener("click", () => {
+        Notifier.sendTelegram("📥 She saveed the photo!");
+      });
+
+      imgContainer.appendChild(img);
+      imgContainer.appendChild(document.createElement("br"));
+      imgContainer.appendChild(dlLink);
+      ui.letter.appendChild(imgContainer);
+    }
+
+    if (msgText) {
+      const p = document.createElement("div"); // div for better structure
+      p.textContent = msgText;
+      p.style.whiteSpace = "pre-wrap";
+      ui.letter.appendChild(p);
+    }
+
+    // 3. New Message Check
+    // We use JSON string to detect changes reliably for objects
+    const currentStr = JSON.stringify(data);
     const lastRead = localStorage.getItem("lastReadMessage");
-    if (msg !== lastRead) {
+
+    if (currentStr !== lastRead) {
       // It's new!
       const counter = document.getElementById("msgCounter");
       counter.textContent = "1";
@@ -890,8 +931,11 @@ onValue(refs.inbox, (snap) => {
       void btn.offsetWidth; // Trigger reflow
       btn.classList.add("shaking");
 
-      Notifier.sendTelegram("📨 She received your message update!");
+      Notifier.sendTelegram("📨 She received your message/doodle!");
     }
+
+    // Store current data temporarily on the element for Read logic
+    ui.letter.dataset.raw = currentStr;
   }
 });
 
@@ -1298,8 +1342,10 @@ Object.entries(ui.modals.triggers).forEach(([key, btn]) => {
       counter.textContent = "";
 
       // Save to storage so it doesn't pop up again on reload
-      const currentMsg = ui.letter.textContent;
-      localStorage.setItem("lastReadMessage", currentMsg);
+      const currentRaw = ui.letter.dataset.raw;
+      if (currentRaw) {
+        localStorage.setItem("lastReadMessage", currentRaw);
+      }
 
       Notifier.sendTelegram("📨 She opened her Inbox");
     }
