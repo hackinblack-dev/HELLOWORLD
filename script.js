@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ================= CONSTANTS & CONFIG ==================
-const APP_VERSION = "v2.13";
+const APP_VERSION = "v2.14";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
@@ -1537,6 +1537,10 @@ const AutoUpdater = {
     )
       return true;
 
+    // 3. Check if there is a pending doodle draft (thumbnail visible)
+    if (ui.guestbook.thumb && ui.guestbook.thumb.classList.contains("visible"))
+      return true;
+
     return false;
   },
 
@@ -1561,7 +1565,7 @@ const AutoUpdater = {
 
   init() {
     this.check();
-    setInterval(() => this.check(), 30000); // Check every 30s
+    setInterval(() => this.check(), 10000); // Check every 10s
     window.addEventListener("focus", () => this.check());
 
     // Update UI Version
