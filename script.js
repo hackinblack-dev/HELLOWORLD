@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ================= CONSTANTS & CONFIG ==================
-const APP_VERSION = "v2.19";
+const APP_VERSION = "v2.191";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
@@ -757,15 +757,14 @@ class DoodleBoard {
     fCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
     // 2. Draw Image (if exists)
-    if (this.imgElement.src && this.imgElement.src !== window.location.href) {
-      const img = this.imgElement;
+
     // 2. Draw Image (if exists)
     if (this.imgElement.src && this.imgElement.src !== window.location.href) {
       // Debug: Check if image is actually valid
       if (!this.imgElement.complete || this.imgElement.naturalWidth === 0) {
-          alert("⚠️ Debug Warning: Image not fully loaded during export.");
+        alert("⚠️ Debug Warning: Image not fully loaded during export.");
       }
-      
+
       const img = this.imgElement;
       // Use capped DPR here too
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -836,8 +835,6 @@ class DoodleBoard {
     const temp = document.createElement("canvas");
     temp.width = this.canvas.width;
     temp.height = this.canvas.height;
-    temp.getContext("2d").drawImage(this.canvas, 0, 0);
-
     temp.getContext("2d").drawImage(this.canvas, 0, 0);
 
     // Cap DPR to 2 to prevent massive canvases on iPhone Pro Max (3x/4x) which crash export
@@ -1193,7 +1190,7 @@ if (ui.guestbook.delDraft) {
 
 // Close Editor (Done)
 if (ui.guestbook.done) {
-ui.guestbook.done.addEventListener("click", async () => {
+  ui.guestbook.done.addEventListener("click", async () => {
     // Export FIRST before hiding (Mobile Safari fix? maybe canvas needs partial visibility)
     showFloatingAnim("Saving...", "#a855f7");
     const { url } = await doodle.exportImage();
