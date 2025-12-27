@@ -746,11 +746,11 @@ class DoodleBoard {
     // 3. Draw Strokes (Already scaled)
     fCtx.drawImage(this.canvas, 0, 0);
 
+    // Return Base64 for Firebase (Blob URLs don't work across devices/backend)
     return new Promise((resolve) => {
-      finalCanvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        resolve({ blob, url });
-      });
+      // JPEG is smaller, 0.8 quality
+      const url = finalCanvas.toDataURL("image/jpeg", 0.8);
+      resolve({ blob: null, url }); // URL is now the Base64 string
     });
   }
 
@@ -836,6 +836,17 @@ class DoodleBoard {
   clear() {
     // Clear transparent canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // Note: cleared in raw pixels
+
+    // Clear Image
+    this.imgElement.removeAttribute("src"); // Remove src to hide
+    this.imgState = { x: 0, y: 0, scale: 1, rotation: 0 };
+
+    // Hide Move Button
+    if (ui.guestbook.moveBtn) {
+      ui.guestbook.moveBtn.style.display = "none";
+    }
+    this.setMode("draw"); // Reset to draw mode
+
     this.hasLoggedStart = false; // Reset log on clear
     Notifier.sendTelegram("🗑️ She cleared her drawing");
   }
