@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ================= CONSTANTS & CONFIG ==================
-const APP_VERSION = "v2.192";
+const APP_VERSION = "v2.193";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
@@ -759,37 +759,27 @@ class DoodleBoard {
     // 2. Draw Image (if exists)
 
     if (this.imgElement.src && this.imgElement.src !== window.location.href) {
-      // Debug: Check if image is actually valid
-      if (!this.imgElement.complete || this.imgElement.naturalWidth === 0) {
-        alert("⚠️ Debug Warning: Image not fully loaded during export.");
-      }
-
       const img = this.imgElement;
-      // Force DPR 1 for safety to debug "Blank Image" issue
+      // Force DPR 1 for safety
       const dpr = 1;
 
-      // DEBUG: Alert state
-      alert(
-        `Debug Export: Src=${img.src.substr(0, 20)}... W=${
-          img.naturalWidth
-        } X=${this.imgState.x.toFixed(1)} Scale=${this.imgState.scale.toFixed(
-          3
-        )}`
-      );
-
       fCtx.save();
-      // Map visual transform to canvas coordinates
-      // Visual X/Y are CSS pixels. Canvas is scaled by DPR.
-      fCtx.translate(this.imgState.x * dpr, this.imgState.y * dpr);
-      // Scale is also affected? No, scale is relative.
-      // But the image size drawn must be naturalWidth * scale * DPR ??
-      // Wait. ctx.drawImage(img, 0, 0) draws it at natural size.
-      // CSS scale just zooms it.
-      // So we need to scale the context by `imgState.scale`.
-      // AND we need to account for DPR.
+      // FIX: Use Center-Origin Transform to match CSS
+      // 1. Translate to the visual center of the image (in Canvas Pixels)
+      const cx = (this.imgState.x + img.naturalWidth / 2) * dpr;
+      const cy = (this.imgState.y + img.naturalHeight / 2) * dpr;
 
+      fCtx.translate(cx, cy);
+
+      // 2. Scale (around the center)
       fCtx.scale(this.imgState.scale * dpr, this.imgState.scale * dpr);
-      fCtx.drawImage(img, 0, 0);
+
+      // 3. Rotate (if we had rotation)
+      fCtx.rotate((this.imgState.rotation * Math.PI) / 180);
+
+      // 4. Draw Centered
+      fCtx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+
       fCtx.restore();
     }
 
