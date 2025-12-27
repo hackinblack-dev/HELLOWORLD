@@ -746,11 +746,37 @@ class DoodleBoard {
     // 3. Draw Strokes (Already scaled)
     fCtx.drawImage(this.canvas, 0, 0);
 
-    // Return Base64 for Firebase (Blob URLs don't work across devices/backend)
+    // Return Base64 (Downscaled to max 1024px to prevent crash/slow upload)
+    const MAX_SIZE = 1024;
+    let width = finalCanvas.width;
+    let height = finalCanvas.height;
+
+    if (width > MAX_SIZE || height > MAX_SIZE) {
+      if (width > height) {
+        height = Math.round((height * MAX_SIZE) / width);
+        width = MAX_SIZE;
+      } else {
+        width = Math.round((width * MAX_SIZE) / height);
+        height = MAX_SIZE;
+      }
+    }
+
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = width;
+    exportCanvas.height = height;
+    const eCtx = exportCanvas.getContext("2d");
+    eCtx.drawImage(finalCanvas, 0, 0, width, height);
+
     return new Promise((resolve) => {
-      // JPEG is smaller, 0.8 quality
-      const url = finalCanvas.toDataURL("image/jpeg", 0.8);
-      resolve({ blob: null, url }); // URL is now the Base64 string
+      // JPEG 0.7 quality
+      try {
+        const url = exportCanvas.toDataURL("image/jpeg", 0.7);
+        resolve({ blob: null, url });
+      } catch (e) {
+        console.error("Export Fail", e);
+        alert("❌ Failed to process image. It might be too large.");
+        resolve({ blob: null, url: null });
+      }
     });
   }
 
@@ -1190,42 +1216,50 @@ ui.guestbook.send.addEventListener("click", async () => {
   const msg = ui.guestbook.input.value.trim();
   const hasDoodle = ui.guestbook.thumb.classList.contains("visible");
 
-  // Optimistic UI
-  ui.guestbook.input.value = "";
-  const box = document.getElementById("guestbookBox");
-  box.classList.remove("visible");
-  box.setAttribute("aria-hidden", "true");
+  if (!msg && !hasDoodle) return;
 
-  // Hide Thumbnail
-  ui.guestbook.thumb.classList.remove("visible");
+  try {
+    const timestamp = Date.now();
+    let imageUrl = null;
 
-  showFloatingAnim("Sent!", "#a855f7");
-  particles.spawnBatch("📝", 8);
+    if (hasDoodle) {
+      showFloatingAnim("Processing...", "#a855f7"); // Feedback during export
+      const result = await doodle.exportImage();
+      imageUrl = result.url;
 
-  const timestamp = Date.now();
-  let imageUrl = null;
+      if (!imageUrl) throw new Error("Image processing failed");
 
-  if (hasDoodle) {
-    const { blob, url } = await doodle.exportImage();
-    imageUrl = url;
-    // Moved to Backend to prevent blocking/double send
-    // Notifier.sendPhoto(blob, msg ? `📝 Note: ${msg}` : "🎨 A doodle for you!");
-    doodle.clear();
-  } else if (msg) {
-    Notifier.sendTelegram(`📝 **New Message:**\n"${msg}"`);
-  }
+      doodle.clear();
+    }
 
-  // Trigger update if it was pending
-  AutoUpdater.triggerIfPending();
+    // Optimistic UI (Only if export didn't throw)
+    ui.guestbook.input.value = "";
+    const box = document.getElementById("guestbookBox");
+    box.classList.remove("visible");
+    box.setAttribute("aria-hidden", "true");
 
-  // Save to Firebase
-  if (msg || imageUrl) {
+    // Hide Thumbnail
+    ui.guestbook.thumb.classList.remove("visible");
+    showFloatingAnim("Sent!", "#a855f7");
+    particles.spawnBatch("📝", 8);
+
+    if (msg) {
+      Notifier.sendTelegram(`📝 **New Message:**\n"${msg}"`);
+    }
+
+    // Trigger update if it was pending
+    AutoUpdater.triggerIfPending();
+
+    // Save to Firebase
     push(ref(db, "guestbook"), {
       text: msg,
       image: imageUrl,
       sentToTelegram: false,
       timestamp,
     });
+  } catch (e) {
+    console.error("Send Error", e);
+    alert("❌ Failed to send: " + e.message);
   }
 });
 
