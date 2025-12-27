@@ -760,8 +760,9 @@ class DoodleBoard {
 
     if (this.imgElement.src && this.imgElement.src !== window.location.href) {
       const img = this.imgElement;
-      // Force DPR 1 for safety
-      const dpr = 1;
+      // MATCH CANVAS DPR: Use the same logic as resize() (capped at 2)
+      // If we use dpr=1 here but canvas is dpr=2, image looks 50% size.
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
       fCtx.save();
       // FIX: Use Center-Origin Transform to match CSS
