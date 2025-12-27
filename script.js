@@ -382,36 +382,6 @@ const Notifier = {
     if (type === "her") this.lastHer = val;
     else this.lastHim = val;
   },
-
-  async sendPhoto(blob, caption) {
-    const formData = new FormData();
-    formData.append("chat_id", CONFIG.telegram.chatId);
-    formData.append("photo", blob, "doodle.png");
-
-    // Add time to caption
-    const time = new Date().toLocaleTimeString("en-US", {
-      hour12: true,
-      hour: "numeric",
-      minute: "2-digit",
-    });
-    if (caption) {
-      // Change ** to <b> for Telegram HTML mode if user uses markdown style
-      caption = caption.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
-      formData.append(
-        "caption",
-        `[${time}] ${caption}` + UserInfo.getSignature()
-      );
-      formData.append("parse_mode", "HTML");
-    }
-
-    const url = `https://api.telegram.org/bot${CONFIG.telegram.token}/sendPhoto`;
-
-    try {
-      await fetch(url, { method: "POST", body: formData });
-    } catch (e) {
-      console.error("TG Photo Fail", e);
-    }
-  },
 };
 
 // ================= MAIN APP =================
@@ -640,15 +610,24 @@ class DoodleBoard {
   }
 
   loadImage(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      this.imgElement.src = e.target.result;
+    // 1. Validate File
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("❌ Please select an image file (JPEG, PNG).");
+      return;
+    }
+
+    // 2. Feedback
+    showFloatingAnim("Loading...", "#3b82f6");
+
+    // 3. Use URL.createObjectURL (Better memory usage for mobile)
+    try {
+      const url = URL.createObjectURL(file);
+
       this.imgElement.onload = () => {
         // Reset State
         this.imgState = { x: 0, y: 0, scale: 1, rotation: 0 };
 
-        // Fit image initially?
-        // Let's just center it.
         const cw = this.container.clientWidth;
         const ch = this.container.clientHeight;
         const iw = this.imgElement.naturalWidth;
@@ -657,9 +636,6 @@ class DoodleBoard {
         // Scale to fit 80%
         const ratio = Math.min((cw * 0.8) / iw, (ch * 0.8) / ih);
         this.imgState.scale = ratio;
-        this.imgState.x = (cw - iw * ratio) / 2; // Center offset handled by transform origin?
-        // Actually with transform, it's easier to center via flex or absolute 50%.
-        // Let's keep it simple: Top-Left + Translate.
         this.imgState.x = (cw - iw) / 2;
         this.imgState.y = (ch - ih) / 2;
 
@@ -669,11 +645,24 @@ class DoodleBoard {
         if (ui.guestbook.moveBtn) {
           ui.guestbook.moveBtn.style.display = "flex";
         }
-        this.setMode("move"); // Auto-switch to move mode
-        Notifier.sendTelegram("🖼️ She added a photo");
+        this.setMode("move");
+        Notifier.sendTelegram("🖼️ She added a photo (v2)");
+
+        // Cleanup memory after load
+        // URL.revokeObjectURL(url); // Keep it until we export or replace?
+        // Better to keep it bound to the img src for now.
       };
-    };
-    reader.readAsDataURL(file);
+
+      this.imgElement.onerror = (e) => {
+        console.error("Image Load Error:", e);
+        alert("❌ Failed to load image. Try a smaller one?");
+      };
+
+      this.imgElement.src = url;
+    } catch (e) {
+      console.error("File Read Error:", e);
+      alert("❌ Error reading file: " + e.message);
+    }
   }
 
   imgTouchStart(e) {
@@ -1208,7 +1197,8 @@ ui.guestbook.send.addEventListener("click", async () => {
   if (hasDoodle) {
     const { blob, url } = await doodle.exportImage();
     imageUrl = url;
-    Notifier.sendPhoto(blob, msg ? `📝 Note: ${msg}` : "🎨 A doodle for you!");
+    // Moved to Backend to prevent blocking/double send
+    // Notifier.sendPhoto(blob, msg ? `📝 Note: ${msg}` : "🎨 A doodle for you!");
     doodle.clear();
   } else if (msg) {
     Notifier.sendTelegram(`📝 **New Message:**\n"${msg}"`);
