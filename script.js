@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ================= CONSTANTS & CONFIG ==================
-const APP_VERSION = "v2.194";
+const APP_VERSION = "v2.195";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
@@ -1310,7 +1310,7 @@ ui.guestbook.send.addEventListener("click", async () => {
     push(ref(db, "guestbook"), {
       text: msg,
       image: imageUrl,
-      sentToTelegram: false,
+      sentToTelegram: true, // Handled directly by frontend now
       timestamp,
     });
   } catch (e) {

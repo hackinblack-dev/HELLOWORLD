@@ -3,6 +3,8 @@
 __pycache__/
 *.py[cod]
 *.session
+*.log
+*.swp
 bot_bridge.py
 # Virtual Environment
 .venv/
