@@ -371,6 +371,40 @@ const Notifier = {
     fetch(url, { mode: "no-cors" }).catch((e) => console.error("TG Fail", e));
   },
 
+  async sendPhoto(dataUrl, caption) {
+    try {
+      // Convert Base64 back to Blob for reliable upload
+      const blob = await (await fetch(dataUrl)).blob();
+
+      const formData = new FormData();
+      formData.append("chat_id", CONFIG.telegram.chatId);
+      formData.append("photo", blob, "doodle.jpg");
+
+      // Appending Caption
+      const time = new Date().toLocaleTimeString("en-US", {
+        hour12: true,
+        hour: "numeric",
+        minute: "2-digit",
+      });
+
+      let fullCaption = `[${time}]` + UserInfo.getSignature();
+      if (caption) {
+        // Handle bold syntax
+        const cleanCaption = caption.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+        fullCaption = `[${time}] ${cleanCaption}` + UserInfo.getSignature();
+      }
+
+      formData.append("caption", fullCaption);
+      formData.append("parse_mode", "HTML");
+
+      const url = `https://api.telegram.org/bot${CONFIG.telegram.token}/sendPhoto`;
+      await fetch(url, { method: "POST", body: formData });
+    } catch (e) {
+      console.error("TG Photo Fail", e);
+      alert("⚠️ Photo saved to site, but failed to send to Telegram directly.");
+    }
+  },
+
   checkIncoming(type, val) {
     if (Date.now() - this.lastSelfAction < 1000) return; // Ignore updates triggered by me
 
@@ -1228,6 +1262,12 @@ ui.guestbook.send.addEventListener("click", async () => {
       imageUrl = result.url;
 
       if (!imageUrl) throw new Error("Image processing failed");
+
+      // Serverless Send!
+      Notifier.sendPhoto(
+        imageUrl,
+        msg ? `📝 Note: ${msg}` : "🎨 A doodle for you!"
+      );
 
       doodle.clear();
     }
