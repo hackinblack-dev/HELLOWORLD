@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ================= CONSTANTS & CONFIG ==================
-const APP_VERSION = "v2.191";
+const APP_VERSION = "v2.192";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
@@ -758,7 +758,6 @@ class DoodleBoard {
 
     // 2. Draw Image (if exists)
 
-    // 2. Draw Image (if exists)
     if (this.imgElement.src && this.imgElement.src !== window.location.href) {
       // Debug: Check if image is actually valid
       if (!this.imgElement.complete || this.imgElement.naturalWidth === 0) {
@@ -766,8 +765,17 @@ class DoodleBoard {
       }
 
       const img = this.imgElement;
-      // Use capped DPR here too
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // Force DPR 1 for safety to debug "Blank Image" issue
+      const dpr = 1;
+
+      // DEBUG: Alert state
+      alert(
+        `Debug Export: Src=${img.src.substr(0, 20)}... W=${
+          img.naturalWidth
+        } X=${this.imgState.x.toFixed(1)} Scale=${this.imgState.scale.toFixed(
+          3
+        )}`
+      );
 
       fCtx.save();
       // Map visual transform to canvas coordinates
@@ -838,6 +846,8 @@ class DoodleBoard {
     temp.getContext("2d").drawImage(this.canvas, 0, 0);
 
     // Cap DPR to 2 to prevent massive canvases on iPhone Pro Max (3x/4x) which crash export
+    // For export, we already force dpr=1 logic above, but this resize logic affects the drawn stroke resolution
+    // Let's keep this matched to view, but carefully.
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.canvas.width = w * dpr;
     this.canvas.height = h * dpr;
@@ -1193,6 +1203,9 @@ if (ui.guestbook.done) {
   ui.guestbook.done.addEventListener("click", async () => {
     // Export FIRST before hiding (Mobile Safari fix? maybe canvas needs partial visibility)
     showFloatingAnim("Saving...", "#a855f7");
+
+    // Tiny delay to ensure UI is rendered
+    await new Promise((r) => setTimeout(r, 100));
     const { url } = await doodle.exportImage();
 
     ui.guestbook.overlay.classList.remove("visible");
