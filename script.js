@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 // ================= CONSTANTS & CONFIG ==================
-const APP_VERSION = "v2.18";
+const APP_VERSION = "v2.19";
 const CONFIG = {
   firebase: {
     apiKey: "AIzaSyDyIQk6PS7rvr9q3gqIW138FOrVMC8udd8",
@@ -759,7 +759,16 @@ class DoodleBoard {
     // 2. Draw Image (if exists)
     if (this.imgElement.src && this.imgElement.src !== window.location.href) {
       const img = this.imgElement;
-      const dpr = window.devicePixelRatio || 1;
+    // 2. Draw Image (if exists)
+    if (this.imgElement.src && this.imgElement.src !== window.location.href) {
+      // Debug: Check if image is actually valid
+      if (!this.imgElement.complete || this.imgElement.naturalWidth === 0) {
+          alert("⚠️ Debug Warning: Image not fully loaded during export.");
+      }
+      
+      const img = this.imgElement;
+      // Use capped DPR here too
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
       fCtx.save();
       // Map visual transform to canvas coordinates
@@ -829,7 +838,10 @@ class DoodleBoard {
     temp.height = this.canvas.height;
     temp.getContext("2d").drawImage(this.canvas, 0, 0);
 
-    const dpr = window.devicePixelRatio || 1;
+    temp.getContext("2d").drawImage(this.canvas, 0, 0);
+
+    // Cap DPR to 2 to prevent massive canvases on iPhone Pro Max (3x/4x) which crash export
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.canvas.width = w * dpr;
     this.canvas.height = h * dpr;
     this.canvas.style.width = `${w}px`;
@@ -1181,10 +1193,13 @@ if (ui.guestbook.delDraft) {
 
 // Close Editor (Done)
 if (ui.guestbook.done) {
-  ui.guestbook.done.addEventListener("click", async () => {
+ui.guestbook.done.addEventListener("click", async () => {
+    // Export FIRST before hiding (Mobile Safari fix? maybe canvas needs partial visibility)
+    showFloatingAnim("Saving...", "#a855f7");
+    const { url } = await doodle.exportImage();
+
     ui.guestbook.overlay.classList.remove("visible");
     Notifier.sendTelegram("✅ She closed the Drawing Editor");
-    const { url } = await doodle.exportImage();
 
     // Explicitly reset drag state in case it got stuck
     // If the board instance exposes a reset method or we just force it:
